@@ -1,0 +1,39 @@
+<section class="min-h-[100svh] flex bg-[#06273d] p-4 gap-2">
+  <!-- SIDEBAR -->
+  <aside class="w-52  rounded-tl-[10px] rounded-bl-[10px] flex flex-col p-4 gap-4 bg-[#06273d] border-2 text-white">
+    <!-- Foto -->
+    <div
+      class="w-full h-32 bg-gray-300 rounded flex items-center justify-center text-xs text-black border border-[#06273d]">
+      FOTO
+    </div>
+
+    <!-- Navegación -->
+    <nav class="flex flex-col gap-4 flex-1 justify-start pt-4 ">
+      <a [routerLink]="['perfil']"
+        class="rounded bg-[#3f6b88] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75]">
+        PERFIL
+      </a>
+      <a [routerLink]="['dashboard']"
+        class="rounded bg-[#3f6b88] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75]">
+        PROYECTOS
+      </a>
+      <a [routerLink]="['editor']"
+        class="rounded bg-[#3f6b88] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75]">
+        EDITOR
+      </a>
+    </nav>
+
+    <!-- Salir -->
+    <div class="mt-auto">
+      <a [routerLink]="['/home']"
+        class="rounded bg-red-600 text-white font-bold text-sm text-center py-2 w-full hover:bg-red-700 block">
+        SALIR
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-h-full ">
+    <router-outlet></router-outlet>
+  </main>
+</section>
