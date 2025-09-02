@@ -1,0 +1,24 @@
+# view_url_3D/auth.py
+from rest_framework import authentication, exceptions
+from rest_framework_simplejwt.tokens import AccessToken
+from .models import Usuario
+
+class JWTAuthentication(authentication.BaseAuthentication):
+    def authenticate(self, request):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return None
+        
+        try:
+            prefix, token = auth_header.split(" ")
+            if prefix.lower() != "bearer":
+                raise exceptions.AuthenticationFailed("Formato de token inválido")
+            
+            access_token = AccessToken(token)
+            usuario_id = access_token.get("usuario_id")
+            usuario = Usuario.objects.get(id=usuario_id)
+            
+        except Exception:
+            raise exceptions.AuthenticationFailed("Token no válido o usuario no encontrado")
+        
+        return (usuario, None)
