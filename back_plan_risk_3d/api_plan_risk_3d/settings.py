@@ -82,7 +82,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'plan_risk_db',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
-        'PASSWORD': '8960406',   # la contraseña de ese usuario
+        'PASSWORD': '071104',   # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
         'PORT': '5432',              # puerto por defecto de PostgreSQL
     }
