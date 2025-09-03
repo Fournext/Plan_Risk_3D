@@ -23,6 +23,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     # path('admin/', admin.site.urls),
     path('', include('view_url_3D.urls')),
+    path('api/', include('plans.urls')),
 ]
 
 # Servir archivos media en desarrollo
