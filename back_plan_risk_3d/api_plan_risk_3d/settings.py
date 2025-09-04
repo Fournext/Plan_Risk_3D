@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'view_url_3D',
     'plans',
+    'users',
 ]
 
 MIDDLEWARE = [

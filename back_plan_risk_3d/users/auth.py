@@ -1,7 +1,9 @@
 # view_url_3D/auth.py
 from rest_framework import authentication, exceptions
 from rest_framework_simplejwt.tokens import AccessToken
-from .models import Usuario
+
+from users.models import Usuario
+
 
 class JWTAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):

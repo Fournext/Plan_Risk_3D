@@ -1,14 +1,16 @@
 from rest_framework import serializers
-from .models import Usuario
+
+from rest_framework import serializers
+
+from django.contrib.auth.hashers import make_password
+
+from users.models import Usuario
+
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = '__all__'
-
-from rest_framework import serializers
-from .models import Usuario
-from django.contrib.auth.hashers import make_password
 
 class RegistroSerializer(serializers.ModelSerializer):
     class Meta:
