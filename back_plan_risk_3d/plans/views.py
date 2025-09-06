@@ -4,6 +4,7 @@ from PIL import Image
 from django.conf import settings
 from rest_framework import status, views
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.files.base import ContentFile
 
@@ -15,13 +16,15 @@ from .converters import image_from_any
 
 class PlanCreateView(views.APIView):
     parser_classes = (MultiPartParser, FormParser)
+    #requiere login
+    permission_classes=(IsAuthenticated,)
 
     def post(self, request, format=None):
         # 1) Guardar SOLO el archivo de entrada (Django lo pone en media/inputs/)
         ser = Plan3DJobSerializer(data=request.data)
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-        job = ser.save()
+        job = ser.save(usuario=request.user)
 
         # 2) Convertir a imagen si hace falta (PDF/DXF/DWG) SIN escribir a disco
         img, err = image_from_any(job.plan_file.path)
@@ -47,6 +50,8 @@ class PlanCreateView(views.APIView):
 
         # 6) Generar GLB en memoria y guardar (una sola vez)
         mesh = build_scene_mesh_clean(det, min_score=0.0, cut_openings=True)
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+        print("Mesh:", mesh)
         if mesh is not None:
             glb_buf = io.BytesIO()
             export_glb(mesh, glb_buf)  # << escribe al buffer
@@ -59,3 +64,14 @@ class PlanCreateView(views.APIView):
         job.save()
 
         return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
+
+
+#obtener la lista de modelos generados por el usuiario require token xd
+class PlanListView(views.APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        # Filtrar solo por el usuario logueado
+        jobs = Plan3DJob.objects.filter(usuario=request.user)
+        ser = Plan3DJobSerializer(jobs, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
