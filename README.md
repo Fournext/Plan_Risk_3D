@@ -1,8 +1,8 @@
 
 
 # Crear entorno con conda
-conda env create -f environment.yml
-conda activate imageTo3D
+  conda env create -f environment_full.yml
+  conda activate imageTo3D
 
 # Instalar dependencias adicionales de pip
 pip install -r requirements.txt
