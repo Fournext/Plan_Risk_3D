@@ -4,6 +4,7 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.files.base import ContentFile
 
@@ -95,3 +96,14 @@ def create_plan_json(request):
     process_and_save_glb(job, det)
 
     return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
+
+
+#obtener la lista de modelos generados por el usuiario require token xd
+class PlanListView(views.APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        # Filtrar solo por el usuario logueado
+        jobs = Plan3DJob.objects.filter(usuario=request.user)
+        ser = Plan3DJobSerializer(jobs, many=True)
+        return Response(ser.data, status=status.HTTP_200_OK)
