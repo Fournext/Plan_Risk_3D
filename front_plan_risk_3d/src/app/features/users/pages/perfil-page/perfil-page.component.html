@@ -1,0 +1,144 @@
+<main class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] p-6">
+  <article class="max-w-[1000px] w-full mx-auto bg-[#ffffff43] text-gray-800 rounded-xl shadow p-6
+                  grid gap-6 grid-rows-[auto_1fr_auto]">
+    <!-- HEADER -->
+    <header class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold">Datos Personales</h2>
+      <button (click)="switchEdition()"
+        class="text-sm font-semibold bg-[#1B3C53] px-4 py-1 rounded-[5px] text-white hover:scale-[1.05]">Editar
+        todo</button>
+    </header>
+
+    <!-- CONTENIDO: AVATAR + FORM -->
+    <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
+      <!-- AVATAR -->
+      <figure class="justify-self-center md:justify-self-start">
+        <img src="https://i.pinimg.com/originals/40/11/b5/4011b5ab5f2376f26a5d46ff904fc5e2.jpg"
+          alt="Avatar de Juan Pérez" class="w-32 h-32 rounded-full object-cover border-2 border-gray-200" />
+        <figcaption class="sr-only">Avatar
+          de Juan Pérez</figcaption>
+      </figure>
+
+      <!-- FORMULARIO DE CAMPOS -->
+      <form [formGroup]="informationForm" (submit)="onSubmit()" class="grid gap-4
+                   grid-cols-1
+                   sm:grid-cols-2
+                   md:grid-cols-3
+                   lg:grid-cols-3">
+        <!-- Repite este bloque para cada campo -->
+        <div class="flex flex-col">
+          <label for="nombre" class="text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <div class="flex gap-2">
+            <input [readonly]="isReadOnly" formControlName="nombre" id="nombre" name="nombre" type="text"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span class="flex-shrink-0  rounded p-1 hover:bg-amber-400" aria-label="Editar nombre">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+              </svg>
+            </span>
+
+
+
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <label for="email" class="text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div class="flex gap-2">
+            <input [readonly]="isReadOnly" formControlName="email" id="email" name="email" type="email"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span class="flex-shrink-0  rounded p-1 hover:bg-amber-400" aria-label="Editar email">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <label for="telefono" class="text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+          <div class="flex gap-2">
+            <input [readonly]="isReadOnly" formControlName="telefono" id="telefono" name="telefono" type="tel"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span class="flex-shrink-0  rounded p-1 hover:bg-amber-400" aria-label="Editar teléfono">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+              </svg>
+
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <label for="plan" class="text-sm font-medium text-gray-700 mb-1">Plan</label>
+          <div class="flex gap-2">
+            <input [readonly]="true" formControlName="plan" id="plan" name="plan" type="text"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span type="button" class="flex-shrink-0  rounded p-1 hover:bg-amber-400" aria-label="Editar plan">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+              </svg>
+
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <label for="expiracion" class="text-sm font-medium text-gray-700 mb-1">Fecha de expiración</label>
+          <div class="flex gap-2">
+            <input [readonly]="isReadOnly" formControlName="fechaExpiracion" id="expiracion" name="expiracion"
+              type="date"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span class="flex-shrink-0  rounded p-1 hover:bg-amber-400" aria-label="Editar expiración">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col">
+          <label for="registro" class="text-sm font-medium text-gray-700 mb-1">Fecha de registro</label>
+          <div class="flex gap-2">
+            <input [readonly]="isReadOnly" formControlName="fechaRegistro" id="registro" name="registro" type="date"
+              class="flex-1 border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+            <span class="flex-shrink-0 rounded p-1 hover:bg-amber-400" aria-label="Editar registro">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+              </svg>
+            </span>
+          </div>
+        </div>
+        @if(isReadOnly==false){
+        <div class="sm:col-span-2 md:col-span-3 lg:col-span-3 flex justify-center mt-4">
+          <button type="submit"
+            class="text-sm font-semibold bg-[#1B3C53] py-1 px-6 rounded-[5px] text-white hover:scale-[1.05]">
+            Aplicar
+          </button>
+        </div>
+        }
+      </form>
+    </div>
+
+    <!-- BIOGRAFÍA / HISTORIAL -->
+    <section>
+      <h3 class="text-sm font-medium text-gray-700">Biografía</h3>
+      <textarea rows="4"
+        class="mt-2 w-full bg-gray-50 text-gray-800 p-4 rounded focus:outline-none focus:ring-2 focus:ring-amber-300"
+        placeholder="Describe algo sobre el usuario…"></textarea>
+    </section>
+  </article>
+</main>

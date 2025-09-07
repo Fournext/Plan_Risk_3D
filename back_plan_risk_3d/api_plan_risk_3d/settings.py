@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -83,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'plan_risk_db',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
-        'PASSWORD': '14776280',   # la contraseña de ese usuario
+        'PASSWORD': '071104',   # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
         'PORT': '5432',              # puerto por defecto de PostgreSQL
     }
@@ -94,14 +95,12 @@ REST_FRAMEWORK = {
         'users.auth.JWTAuthentication',
     ),
 }
-from datetime import timedelta
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
-
 
 
 # Password validation
@@ -149,4 +148,4 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
-#AUTH_USER_MODEL = 'view_url_3D.Usuario'
+# AUTH_USER_MODEL = 'view_url_3D.Usuario'

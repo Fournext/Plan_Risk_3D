@@ -1,0 +1,47 @@
+<section class="min-h-[100svh] flex bg-gradient-to-b from-[#1B3C53]  to-[#456882] p-4 gap-2">
+  <button (click)="menuOpen = !menuOpen"
+    class="absolute top-4 left-4 z-20 p-1 bg-red-600 text-white font-bold rounded-[5px] rounded-tl-[10px] shadow focus:outline-none">
+    {{ menuOpen ? '✕' : '☰' }}
+  </button>
+  <!-- SIDEBAR -->
+  <!--con el class.hidden sacamos del doom el elemento-->
+  <aside [class.w-0]="!menuOpen" [class.opacity-0]="!menuOpen" [class.w-52]="menuOpen" [class.opacity-100]="menuOpen"
+    class="overflow-hidden rounded-[10px] flex flex-col p-4 gap-4
+         bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white
+         transition-[width,opacity] duration-300 ease-in-out">
+    <!-- Foto -->
+    <div
+      class="w-full h-30 bg-gray-300 rounded flex items-center justify-center text-xs text-black border border-[#06273d] mt-5">
+      FOTO
+    </div>
+
+    <!-- Navegación -->
+    <nav class="flex flex-col gap-4 flex-1 justify-start pt-4 ">
+      <a [routerLink]="['perfil']" routerLinkActive="scale-[1.1] bg-[#355c75]"
+        class="rounded bg-[#1B3C53] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75] hover:scale-[1.05]">
+        PERFIL
+      </a>
+      <a [routerLink]="['dashboard']" routerLinkActive="scale-[1.1] bg-[#355c75]"
+        class="rounded bg-[#1B3C53] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75] hover:scale-[1.05]">
+        PROYECTOS
+      </a>
+      <a [routerLink]="['editor']" routerLinkActive="scale-[1.1] bg-[#355c75]"
+        class="rounded bg-[#1B3C53] text-white font-semibold text-sm text-center py-2 hover:bg-[#355c75] hover:scale-[1.05]">
+        EDITOR
+      </a>
+    </nav>
+
+    <!-- Salir -->
+    <div class="mt-auto">
+      <button (click)="logout()"
+        class="rounded bg-red-600 text-white font-bold text-sm text-center py-2 w-full hover:bg-red-700 block">
+        SALIR
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-h-full ">
+    <router-outlet></router-outlet>
+  </main>
+</section>

@@ -1,0 +1,86 @@
+<section
+  class="relative min-h-[90vh] flex items-center justify-center text-center px-4 sm:px-6 overflow-hidden bg-cover bg-center bg-[url(assets/casa.png)]">
+  <!-- Gradiente de fondo negro a transparente -->
+  <div class="absolute inset-0 bg-gradient-to-b from-[#0a0a0abb] via-black/50 to-transparent z-0"></div>
+
+  <!-- Contenido -->
+  <div class="relative max-w-4xl">
+    <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight text-white drop-shadow-[2px_2px_2px_black]">
+      Transparencia <span class="text-white">y</span><br />
+      eficiencia para tus<br />
+      <span class="text-white drop-shadow-[2px_2px_2px_black]">proyectos de arquitectura en 3D</span>
+    </h1>
+    <p class="mt-4 text-sm sm:text-base text-[#f6f2f2] max-w-xl mx-auto drop-shadow-[2px_2px_2px_black]">
+      Sube tus planos, genera modelos 3D estructurales, simula riesgos y comparte visualizaciones interactivas con tu
+      equipo y clientes.
+    </p>
+    <div class="mt-6">
+      <a href="#prueba" (click)="scrollTo($event,'prueba')"
+        class="rounded-xl bg-[#1B3C53] px-5 py-2 text-white text-sm font-semibold shadow hover:bg-[#456882]">
+        Probar modelo
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!-- FUNCIONALIDADES -->
+<section id="funcionalidades" class="mx-auto max-w-6xl px-6 pt-16 pb-10 text-center">
+  <h2 class="text-xl font-extrabold tracking-wide text-slate-900">FUNCIONALIDADES</h2>
+  <div class="mt-6 grid gap-6 sm:grid-cols-3">
+    <div class="rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4 shadow-md">
+      <div class="text-2xl mb-2">🛡️</div>
+      <h3 class="text-lg font-bold">Seguridad</h3>
+      <p class="text-sm mt-1">Datos inmutables con blockchain</p>
+    </div>
+    <div class="rounded-xl bg-gradient-to-br from-sky-800 to-cyan-600 text-white p-4 shadow-md">
+      <div class="text-2xl mb-2">🤖</div>
+      <h3 class="text-lg font-bold">Inteligencia Artificial</h3>
+      <p class="text-sm mt-1">Predicciones de riesgos de colapso</p>
+    </div>
+    <div class="rounded-xl bg-gradient-to-br from-emerald-700 to-green-500 text-white p-4 shadow-md">
+      <div class="text-2xl mb-2">⚙️</div>
+      <h3 class="text-lg font-bold">Automatización</h3>
+      <p class="text-sm mt-1">Procesos eficientes con n8n</p>
+    </div>
+  </div>
+</section>
+
+<!-- MODELO DE PRUEBA -->
+<section id="prueba" class="mx-auto max-w-6xl px-6 pt-10 pb-16 text-center">
+  <h2 class="text-xl font-extrabold tracking-wide text-slate-900 mb-6">MODELO DE PRUEBA</h2>
+  <div class="rounded-2xl overflow-hidden border border-slate-300 shadow-lg">
+    <canvas #canvas class=" w-full h-[500px] "></canvas>
+  </div>
+</section>
+
+<!-- EQUIPO -->
+<section class="mx-auto max-w-6xl px-6 py-16 text-center border-t border-slate-200">
+  <h2 class="text-xl font-extrabold tracking-wide text-slate-900 mb-8">EQUIPO DE DESARROLLO</h2>
+  <div class="grid grid-cols-3 sm:grid-cols-6 gap-6 justify-items-center">
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">Arquitecto</span>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">Diseño</span>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">UI/UX</span>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">Frontend</span>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">Data/IA</span>
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <div class="h-20 w-20 rounded-full bg-slate-300"></div>
+      <span class="text-xs font-semibold text-slate-700">QA</span>
+    </div>
+  </div>
+</section>

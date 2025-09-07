@@ -1,0 +1,57 @@
+<div class="h-full w-full flex flex-col">
+  <!-- Sección con fondo y altura calculada -->
+  <section class="relative flex-1 bg-cover bg-center bg-[url(assets/casa.png)] overflow-hidden"
+    style="min-height: calc(100svh - 8rem);">
+    <!-- Capa oscura + blur -->
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
+
+    <!-- Contenedor scrollable en móviles -->
+    <div class="relative z-10 mx-auto flex h-full max-w-7xl items-center justify-center px-4 py-6 sm:px-6">
+      <!-- Card de login -->
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()"
+        class="w-full max-w-md overflow-auto rounded-2xl border border-white/30 bg-slate-800/50 p-6 shadow-xl backdrop-blur-md sm:p-8">
+        <!-- Título -->
+        <h1 class="mb-6 text-center text-xl font-extrabold tracking-wide text-white sm:text-2xl">
+          REGISTRARSE
+        </h1>
+
+        <!-- Campo: Correo -->
+        <div class="mb-4">
+          <label class="mb-1 block text-sm font-semibold text-slate-100" for="email">Correo electrónico</label>
+          <input formControlName="email" type="email" id="email"
+            class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60 outline-none ring-0 transition focus:border-transparent focus:ring-2 focus:ring-sky-400"
+            placeholder="tu@correo.com" />
+        </div>
+
+        <!-- Campo: Contraseña -->
+        <div class="mb-6">
+          <label class="mb-1 block text-sm font-semibold text-slate-100" for="password">Contraseña</label>
+          <input formControlName="password" type="password" id="password"
+            class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60 outline-none ring-0 transition focus:border-transparent focus:ring-2 focus:ring-sky-400"
+            placeholder="••••••••" />
+        </div>
+        <!-- Campo: Nombre -->
+        <div class="mb-6">
+          <label class="mb-1 block text-sm font-semibold text-slate-100" for="name">Nombre completo</label>
+          <input formControlName="nombre" type="text" id="name"
+            class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60 outline-none ring-0 transition focus:border-transparent focus:ring-2 focus:ring-sky-400"
+            placeholder="••••••••" />
+        </div>
+
+        <!-- Botón registrar -->
+        <button type="submit"
+          class="mb-4 w-full rounded-[10px] border border-white/20 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-sky-400">
+          REGISTRAR
+        </button>
+
+        <!-- Links inferiores -->
+        <div class="mt-2 flex items-center justify-between text-sm">
+          <a routerLink="/login"
+            class="rounded px-1 text-slate-200/90 transition hover:text-white hover:underline">Ingresar</a>
+          <a routerLink="/home"
+            class="rounded px-1 text-slate-200/90 transition hover:text-white hover:underline">Volver</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,43 @@
+<section class="min-h-[100svh] flex flex-col" aria-label="Página PlanRisk 3D">
+  <!-- HEADER -->
+  <header class="w-full h-16 bg-white shadow-md sticky top-0 z-50 border-b-2 border-[#456882]">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+      <nav aria-label="Navegación principal">
+        <ul class="flex gap-6 sm:gap-8">
+          <li>
+            <a [routerLink]="['/home']" routerLinkActive="bg-[#1B3C53] text-white"
+              class="rounded-[10px] px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-[#456882]"
+              aria-current="page">
+              Inicio
+            </a>
+          </li>
+          <li>
+            <a [routerLink]="['/']" fragment="plans"
+              class="rounded-[10px] px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-100">
+              Planes
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <a routerLink="/login"
+        class="rounded-[10px] bg-[#1B3C53] px-4 py-1.5 text-sm font-semibold text-white shadow hover:bg-[#456882]">
+        Login
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="flex-1 flex">
+    <div class="flex-1 min-h-0"> <!-- Esto asegura que el contenido no cree scroll infinito -->
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-[#1B3C53] text-white h-16 flex items-center justify-center px-4">
+    <p class="text-xs text-gray-400 text-center leading-tight">
+      © 2025 PlanRisk 3D. Todos los derechos reservados.
+    </p>
+  </footer>
+</section>
