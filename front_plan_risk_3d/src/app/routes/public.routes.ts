@@ -13,11 +13,11 @@ export const publicRoutes: Routes = [
       }, {
         path: 'login',
         title: 'Iniciar Sesion',
-        loadComponent: () => import('../features/public/pages/login-page/login-page.component').then(m => m.LoginPageComponent)
+        loadComponent: () => import('../features/auth/pages/login-page/login-page.component').then(m => m.LoginPageComponent)
       }, {
         path: 'register',
         title: 'Crear cuenta',
-        loadComponent: () => import('../features/public/pages/register-page/register-page.component').then(m => m.RegisterPageComponent)
+        loadComponent: () => import('../features/auth/pages/register-page/register-page.component').then(m => m.RegisterPageComponent)
       },
       {
         path: '',

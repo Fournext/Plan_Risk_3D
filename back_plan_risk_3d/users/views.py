@@ -1,19 +1,21 @@
 
+from datetime import timedelta
 from django.conf import settings
 import os
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status,viewsets,generics,status
+from rest_framework import status, viewsets, generics, status
 
 from users.models import Usuario
 
-from .serializers import UsuarioSerializer,RegistroSerializer
+from .serializers import UsuarioSerializer, RegistroSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password,make_password
+from django.contrib.auth.hashers import check_password, make_password
 from rest_framework.views import APIView
 from .auth import JWTAuthentication
+
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
@@ -21,7 +23,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    #---------Subir a Premium
+    # ---------Subir a Premium
     @action(detail=True, methods=['post'])
     def mejorar(self, request, pk=None):
         usuario = self.get_object()
@@ -34,7 +36,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
 
-    #----------Bajar a Normal
+    # ----------Bajar a Normal
     @action(detail=True, methods=['post'])
     def degradar(self, request, pk=None):
         usuario = self.get_object()
@@ -43,7 +45,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.save()
 
         return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
-    
+
     def perform_create(self, serializer):
         password = serializer.validated_data.get("password")
         if password:
@@ -57,13 +59,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 
-
-
 class RegistroView(generics.CreateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
-
 
 
 class LoginView(APIView):
@@ -76,10 +75,12 @@ class LoginView(APIView):
         try:
             usuario = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
-            return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Credenciales inválidas"},
+                            status=status.HTTP_401_UNAUTHORIZED)
 
         if not check_password(password, usuario.password):
-            return Response({"error": "Credenciales inválidas"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Credenciales inválidas"},
+                            status=status.HTTP_401_UNAUTHORIZED)
 
         tokens = generar_tokens(usuario)
 
@@ -89,6 +90,7 @@ class LoginView(APIView):
             "usuario": UsuarioSerializer(usuario).data
         })
 
+
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
@@ -96,8 +98,6 @@ class LogoutView(APIView):
     def post(self, request):
         return Response({"message": "Sesión cerrada, borra tu token localmente"}, status=205)
 
-
-from datetime import timedelta
 
 def generar_tokens(usuario):
     refresh = RefreshToken()
