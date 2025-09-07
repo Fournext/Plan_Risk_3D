@@ -3,7 +3,7 @@ import numpy as np
 import trimesh
 from trimesh.transformations import rotation_matrix
 from shapely.geometry import LineString, box, Polygon, MultiPolygon
-from shapely.ops import unary_union, snap
+from shapely.ops import unary_union, snap, polygonize
 import trimesh.repair as repair
 
 # ===== Parámetros globales =====
@@ -18,7 +18,7 @@ EPS_NORMAL         = 0.000  # 1 mm
 WINDOW_SILL_M      = 0.90
 WINDOW_HEIGHT_M    =  WALL_HEIGHT_M - WINDOW_SILL_M
 
-# “grosor” de las barras de la cruz
+# "grosor" de las barras de la cruz
 WINDOW_BAR_THICK_M = 0.03
 
 # grosor de la línea/tapa superior (3 cm)
@@ -28,7 +28,7 @@ TOP_CAP_THICK_M = 0.03
 JOINT_PAD_M   = 0.02   # alarga 2 cm los tramos para que las juntas cierren
 EPS_CUT       = 0.003  # 3 mm de margen al recortar vanos
 TOL_SIMPLIFY  = 0.002  # 2 mm para simplificar contornos
-TOL_SNAP      = 0.004  # 4 mm para “pegar” vértices cercanos
+TOL_SNAP      = 0.004  # 4 mm para "pegar" vértices cercanos
 
 
 # Colores RGBA
@@ -105,25 +105,13 @@ def _colorize(mesh: trimesh.Trimesh, rgba):
     return mesh
 
 
-# ---------- MUROS ----------
-def _wall_mesh_from_roi(p, px2m):
-    dx, dy, cx, cy = _roi_dims_center_m(p, px2m)
-    # eje mayor = longitud del muro; eje menor = espesor del muro
-    if dx >= dy:  # muro horizontal (largo en X, espesor en Y)
-        ext = [dx, WALL_THICKNESS_M, WALL_HEIGHT_M]
-    else:         # muro vertical   (largo en Y, espesor en X)
-        ext = [WALL_THICKNESS_M, dy, WALL_HEIGHT_M]
-    m = trimesh.creation.box(extents=ext)
-    m.apply_translation([cx, cy, WALL_HEIGHT_M * 0.5])
-    return _colorize(m, COLOR_WALL)
-
 # ---------- PUERTAS ----------
 def _door_mesh_from_roi(p, px2m):
     """
     Puerta con el MISMO espesor que el muro:
       - Si el muro es horizontal: puerta extents = [ancho_X, espesor_muro, altura_puerta]
       - Si el muro es vertical  : puerta extents = [espesor_muro, ancho_Y, altura_puerta]
-    La “sacamos” 1 mm hacia afuera para evitar z-fighting.
+    La "sacamos" 1 mm hacia afuera para evitar z-fighting.
     """
     dx, dy, cx, cy = _roi_dims_center_m(p, px2m)
     if dx >= dy:  # muro horizontal -> normal en Y
@@ -242,7 +230,7 @@ def _window_mesh_from_roi(p, px2m):
     return trimesh.util.concatenate(parts)
 
 # ---------- Orquestador ----------
-def build_scene_mesh_clean(det_json: dict, min_score=0.0, cut_openings=True):
+def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
     """
     Muros SIN solapes:
       - ROI -> Línea central
@@ -277,22 +265,31 @@ def build_scene_mesh_clean(det_json: dict, min_score=0.0, cut_openings=True):
     if not wall_lines:
         return None
 
-    # 1) buffer (espesor/2), uniones BEVEL para esquinas limpias
-    pads = [ln.buffer(WALL_THICKNESS_M/2.0, cap_style=2, join_style=3, mitre_limit=2.0)
-            for ln in wall_lines]
-    walls_union = unary_union(pads)
-
-    # 2) snap + simplify para eliminar micro-grietas/picos en vértices
-    walls_union = snap(walls_union, walls_union, TOL_SNAP).buffer(0)
+    # 1) Unir todos los ejes de muro en un MultiLineString y hacer snap global
+    from shapely.geometry import MultiLineString
+    if len(wall_lines) == 1:
+        merged_lines = wall_lines[0]
+    else:
+        merged_lines = MultiLineString(wall_lines)
+    
+    # 2) Crear un polígono unificado a partir de todas las líneas
+    # Primero unimos todas las líneas y luego creamos un polígono a partir de ellas
+    walls_union = unary_union(merged_lines)
+    
+    # 3) Aplicar buffer para crear el grosor de las paredes
+    walls_union = walls_union.buffer(WALL_THICKNESS_M/2.0, cap_style=2, join_style=2)
+    
+    # 4) Simplificar y limpiar la geometría
     walls_union = walls_union.simplify(TOL_SIMPLIFY, preserve_topology=True).buffer(0)
+    walls_union = snap(walls_union, walls_union, TOL_SNAP).buffer(0)
 
-    # 3) resta de vanos (si aplica) + limpieza
+    # 5) resta de vanos (si aplica) + limpieza
     if cut_openings and opening_polys:
         openings_union = unary_union(opening_polys).buffer(0)
         walls_union = walls_union.difference(openings_union)
         walls_union = walls_union.buffer(0)
 
-    # 4) extrusión y reparación
+    # 6) extrusión y reparación
     walls_mesh = _extrude_polygon_union(walls_union)
 
     scene = trimesh.Scene()
@@ -320,4 +317,3 @@ def export_glb(geom, out: str, make_y_up: bool = True):
     else:
         # Es una ruta
         geom.export(out)
-    #geom.export(out_path)
