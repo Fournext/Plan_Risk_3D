@@ -26,7 +26,7 @@ Thumbs.db
 db.sqlite3
 
 # Migraciones (si quieres ignorarlas al resetear BD)
-*/migrations/*
+**/migrations/*
 !*/migrations/__init__.py
 
 # Archivos de entorno
