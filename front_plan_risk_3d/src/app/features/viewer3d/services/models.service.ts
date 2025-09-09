@@ -1,0 +1,26 @@
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable, signal } from '@angular/core';
+import { environment } from '../../../../environments/environment';
+import { Model3D } from '../../../models/interfaces/model3D/model3D.interface';
+import { Observable, tap } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ModelsService {
+  private http = inject(HttpClient);
+  private API = environment.endpoint;
+
+  public listModelsUser = signal<Model3D[]>([]);
+
+  getModels(): Observable<any> {
+    return this.http.get<any>(`${this.API}api/set_plan/lista_modelos/`).pipe(
+      tap((response: Model3D[]) => {
+        this.listModelsUser.set(response);
+      })
+    )
+  }
+
+  constructor() { }
+
+}
