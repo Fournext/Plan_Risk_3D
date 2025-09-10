@@ -7,8 +7,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.files.base import ContentFile
-
+from mrcnn import views
+from plans.models import Plan3DJob
+from users.models import Usuario 
 from .serializers import Plan3DJobSerializer
+from rest_framework.decorators import permission_classes
 
 
 def process_and_save_glb(job, det):
@@ -25,7 +28,6 @@ def process_and_save_glb(job, det):
     job.height = det.get("Height", 0)
     job.save()
     return job
-
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -60,6 +62,17 @@ def create_plan3d_job(request):
     job.detections_json.save(f'job_{job.id}_detections.json',
                              ContentFile(json_bytes), save=False)
 
+
+    # 5.1) Asociar el job con el usuario
+    usuario_id = request.data.get("usuario")
+    try:
+        usuario_instance = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    job.usuario = usuario_instance
+    job.save()
+
     # 6 y 7) Generar GLB, guardar y metadatos
     process_and_save_glb(job, det)
 
@@ -81,9 +94,19 @@ def create_plan_json(request):
         print(ser.errors)
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
     job = ser.save()
-
+    
     # Guardar el archivo json en el campo detections_json
     job.detections_json.save(f'job_{job.id}_detections.json', json_file, save=False)
+
+    # Asociar el job con el usuario
+    usuario_id = request.data.get("usuario")
+    try:
+        usuario_instance = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    job.usuario = usuario_instance
+    job.save()
 
     # Leer el contenido del JSON para procesar
     json_file.seek(0)
@@ -97,13 +120,11 @@ def create_plan_json(request):
 
     return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
 
-
 #obtener la lista de modelos generados por el usuiario require token xd
-class PlanListView(views.APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, format=None):
-        # Filtrar solo por el usuario logueado
-        jobs = Plan3DJob.objects.filter(usuario=request.user)
-        ser = Plan3DJobSerializer(jobs, many=True)
-        return Response(ser.data, status=status.HTTP_200_OK)
+@api_view(['GET'])
+@parser_classes([MultiPartParser, FormParser])
+@permission_classes([IsAuthenticated])
+def get_lista_modelos(request, format=None):
+    jobs = Plan3DJob.objects.filter(usuario=request.user)
+    ser = Plan3DJobSerializer(jobs, many=True)
+    return Response(ser.data, status=status.HTTP_200_OK)
