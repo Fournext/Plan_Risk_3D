@@ -11,6 +11,7 @@ import { isPlatformBrowser } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Modelo3D } from '../../../../models/classes/model3D';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-editor-page',
@@ -146,7 +147,7 @@ export class EditorPageComponent {
 
     //url del modelo
     //const url = 'https://cdn.jsdelivr.net/gh/BrayanQuispe24/mis-modelos-3d@main/models/cartoon_cyberpunk_building.glb';
-    const url = `http://localhost:8000${model.glb_model}`;
+    const url = `http://ec2-18-222-5-143.us-east-2.compute.amazonaws.com:8000${model.glb_model}`;
     // 5) Cargar modelo 3D
     const modelo = new Modelo3D(
       this.scene,
