@@ -1,0 +1,41 @@
+services:
+  web:
+    build: ./back_plan_risk_3d/
+    container_name: django_backend
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=plan_risk_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=071104
+      - CORS_ALLOWED_ORIGINS=http://localhost:4000,http://angular-app:4000
+    volumes:
+      - ./back_plan_risk_3d:/app
+    ports:
+      - "8000:8000"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - angular-app
+    networks:
+      - backend
+      - frontend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  angular-app:
+    build: ./front_plan_risk_3d/
+    container_name: angular_frontend
+    ports:
+      - "4000:4000"
+    environment:
+      - API_URL=http://web:8000
+    networks:
+      - frontend
+      - backend
+
+networks:
+  backend:
+    external: true
+  frontend:
+    driver: bridge

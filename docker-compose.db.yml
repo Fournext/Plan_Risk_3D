@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres_db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=071104 
+      - POSTGRES_DB=plan_risk_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d plan_risk_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      #- ./aula-inteligente-back/rp.sql:/tmp/rp.sql
+    ports:
+      - "5050:80"
+    user: "5050:5050"
+    # entrypoint: >
+    #   /bin/sh -c "
+    #     chown -R 5050:5050 /var/lib/pgadmin && 
+    #     chmod -R 775 /var/lib/pgadmin && 
+    #     mkdir -p /var/lib/pgadmin/storage/admin_example.com && 
+    #     cp /tmp/rp.sql /var/lib/pgadmin/storage/admin_example.com/rp.sql && 
+    #     /entrypoint.sh"
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+networks:
+  backend:
+    external: true
+
+volumes:
+  pgdata:
+  pgadmin_data:

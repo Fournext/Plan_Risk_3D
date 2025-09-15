@@ -19,11 +19,11 @@ export const publicRoutes: Routes = [
         title: 'Crear cuenta',
         loadComponent: () => import('../features/auth/pages/register-page/register-page.component').then(m => m.RegisterPageComponent)
       },
-      {
-        path: '',
-        pathMatch: 'full',
-        redirectTo: 'home'
-      }
+      // {
+      //   path: '',
+      //   pathMatch: 'full',
+      //   redirectTo: 'home'
+      // }
     ]
   }
 ]
