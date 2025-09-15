@@ -1,0 +1,2 @@
+*.h5 filter=lfs diff=lfs merge=lfs -text
+back_plan_risk_3d/weights/maskrcnn_15_epochs.h5 filter=lfs diff=lfs merge=lfs -text
