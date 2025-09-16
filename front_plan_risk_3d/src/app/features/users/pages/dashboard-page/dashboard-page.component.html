@@ -2,11 +2,16 @@
   <!-- Contenido principal -->
   <main class="flex-1 p-6">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div class="h-32 rounded-md bg-[#1B3C53]"></div>
-      <div class="h-32 rounded-md bg-[#1B3C53]"></div>
-      <div class="h-32 rounded-md bg-[#1B3C53]"></div>
-      <div class="h-32 rounded-md bg-[#1B3C53]"></div>
-      <div class="h-32 rounded-md bg-[#1B3C53]"></div>
+      @for (item of listModels(); track item.id;let i=$index) {
+      <div
+        class="h-32 rounded-md bg-cover bg-center bg-[url(assets/imagen-defecto.jpg)] flex justify-center items-center gap-2 text-black font-bold">
+        <span>
+          Modelo: {{i+1}}
+        </span>
+        <button class="bg-green-500 hover:scale-[1.05] text-white px-2 py-1 rounded-[10px]"
+          (click)="guardarModelo(item)">Abrir</button>
+      </div>
+      }
       <div class="h-32 rounded-md bg-[#1B3C53] flex items-center justify-center font-bold text-white">
         AGREGAR
       </div>

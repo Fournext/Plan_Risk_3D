@@ -6,6 +6,12 @@ export const routes: Routes = [
   //bloque publico(implementar canMatch para redirigir si ya esta logueado)
   {
     path: '',
+    pathMatch: 'full',
+    redirectTo: 'home'
+  },
+  
+  {
+    path: '',
     children: publicRoutes
   },
   //bloque privado
@@ -13,6 +19,8 @@ export const routes: Routes = [
 
   {
     path: '**',
-    redirectTo: ''
+    redirectTo: 'home',   // 👈 fallback directo a /home
+    pathMatch: 'full'
   }
+
 ];
