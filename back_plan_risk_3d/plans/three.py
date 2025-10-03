@@ -230,7 +230,7 @@ def _window_mesh_from_roi(p, px2m):
     return trimesh.util.concatenate(parts)
 
 # ---------- Orquestador ----------
-def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
+def build_scene_mesh(det_json: dict, min_score=0.70, cut_openings=True):
     """
     Muros SIN solapes:
       - ROI -> Línea central
@@ -238,6 +238,7 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
       - snap + simplify para pegar vértices casi coincidentes y eliminar picos
       - (opcional) resta de vanos
       - extrusión y reparación de mesh
+      - min_score: filtro de confianza (default 0.70 para eliminar detecciones malas)
     """
     px2m = _pixel_to_meter_from_det(det_json, fallback=0.01)
 
@@ -277,7 +278,8 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
     walls_union = unary_union(merged_lines)
     
     # 3) Aplicar buffer para crear el grosor de las paredes
-    walls_union = walls_union.buffer(WALL_THICKNESS_M/2.0, cap_style=2, join_style=2)
+    # join_style=3 (BEVEL) evita picos largos en esquinas que causan desbordamientos
+    walls_union = walls_union.buffer(WALL_THICKNESS_M/2.0, cap_style=2, join_style=3)
     
     # 4) Simplificar y limpiar la geometría
     walls_union = walls_union.simplify(TOL_SIMPLIFY, preserve_topology=True).buffer(0)
