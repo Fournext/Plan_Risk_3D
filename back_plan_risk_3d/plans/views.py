@@ -19,7 +19,8 @@ def process_and_save_glb(job, det):
     Paso 6 y 7: Generar GLB en memoria, guardar, actualizar metadatos y guardar el job.
     """
     from .three import build_scene_mesh, export_glb
-    mesh = build_scene_mesh(det, min_score=0.0, cut_openings=True)
+    # min_score=0.70 filtra detecciones de baja confianza (ventanas huérfanas, muros mal detectados)
+    mesh = build_scene_mesh(det, min_score=0.70, cut_openings=True)
     if mesh is not None:
         glb_buf = io.BytesIO()
         export_glb(mesh, glb_buf)
