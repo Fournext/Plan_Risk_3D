@@ -13,7 +13,6 @@ WALL_THICKNESS_M   = 0.15
 DOOR_HEIGHT_M      = WALL_HEIGHT_M
 # la puerta tendrá el MISMO espesor que el muro
 # (para evitar z-fighting mantenemos un epsilon de separación)
-EPS_NORMAL         = 0.000  # 1 mm
 
 WINDOW_SILL_M      = 0.90
 WINDOW_HEIGHT_M    =  WALL_HEIGHT_M - WINDOW_SILL_M
@@ -29,6 +28,7 @@ JOINT_PAD_M   = 0.02   # alarga 2 cm los tramos para que las juntas cierren
 EPS_CUT       = 0.003  # 3 mm de margen al recortar vanos
 TOL_SIMPLIFY  = 0.002  # 2 mm para simplificar contornos
 TOL_SNAP      = 0.004  # 4 mm para "pegar" vértices cercanos
+EXTERNAL_WALL_MARGIN = 0.08  # 8 cm de margen para detectar muros externos
 
 
 # Colores RGBA
@@ -59,16 +59,39 @@ def _roi_dims_center_m(p, px2m):
     return dx, dy, cx, cy
 
 def _wall_centerline_from_roi(p, px2m):
-    """Devuelve (LineString, orient) por el eje mayor del ROI y extendido JOINT_PAD_M."""
+    """Devuelve (LineString, orient, roi) por el eje mayor del ROI y extendido JOINT_PAD_M."""
     dx, dy, cx, cy = _roi_dims_center_m(p, px2m)
     if dx >= dy:
         L = dx + 2 * JOINT_PAD_M
         ln = LineString([(cx - L/2.0, cy), (cx + L/2.0, cy)])
-        return ln, 'h'
+        return ln, 'h', p
     else:
         L = dy + 2 * JOINT_PAD_M
         ln = LineString([(cx, cy - L/2.0), (cx, cy + L/2.0)])
-        return ln, 'v'
+        return ln, 'v', p
+
+def _is_external_wall(roi, px2m, img_width, img_height):
+    """Detecta si un muro está en el perímetro externo del plano."""
+    dx, dy, cx, cy = _roi_dims_center_m(roi, px2m)
+    
+    # Convertir margen de metros a proporción de la imagen
+    margin = EXTERNAL_WALL_MARGIN
+    
+    # Verificar si está cerca de los bordes (en coordenadas en metros)
+    # Asumimos que la imagen también se escala a metros
+    x1_m = roi['x1'] * px2m
+    x2_m = roi['x2'] * px2m
+    y1_m = roi['y1'] * px2m
+    y2_m = roi['y2'] * px2m
+    width_m = img_width * px2m
+    height_m = img_height * px2m
+    
+    on_left = min(x1_m, x2_m) <= margin
+    on_right = max(x1_m, x2_m) >= width_m - margin
+    on_top = min(y1_m, y2_m) <= margin
+    on_bottom = max(y1_m, y2_m) >= height_m - margin
+    
+    return on_left or on_right or on_top or on_bottom
 
 def _opening_polygon_from_roi(p, px2m):
     """Rectángulo del vano que atraviesa TODO el espesor del muro (+EPS_CUT)."""
@@ -108,140 +131,138 @@ def _colorize(mesh: trimesh.Trimesh, rgba):
 # ---------- PUERTAS ----------
 def _door_mesh_from_roi(p, px2m):
     """
-    Puerta con el MISMO espesor que el muro:
-      - Si el muro es horizontal: puerta extents = [ancho_X, espesor_muro, altura_puerta]
-      - Si el muro es vertical  : puerta extents = [espesor_muro, ancho_Y, altura_puerta]
-    La "sacamos" 1 mm hacia afuera para evitar z-fighting.
+    Puerta como rectángulo directo desde las coordenadas ROI.
+    Usa las dimensiones exactas detectadas (dx, dy) y crea un box 3D.
     """
-    dx, dy, cx, cy = _roi_dims_center_m(p, px2m)
-    if dx >= dy:  # muro horizontal -> normal en Y
-        ext = [max(dx, 1e-4), WALL_THICKNESS_M, DOOR_HEIGHT_M]
-        offset = [0, +EPS_NORMAL, 0]
-    else:         # muro vertical   -> normal en X
-        ext = [WALL_THICKNESS_M, max(dy, 1e-4), DOOR_HEIGHT_M]
-        offset = [+EPS_NORMAL, 0, 0]
+    x1_m = p['x1'] * px2m
+    y1_m = p['y1'] * px2m
+    x2_m = p['x2'] * px2m
+    y2_m = p['y2'] * px2m
+    
+    # Calcular dimensiones del rectángulo
+    width = abs(x2_m - x1_m)
+    depth = abs(y2_m - y1_m)
+    
+    # Centro del rectángulo
+    cx = (x1_m + x2_m) * 0.5
+    cy = (y1_m + y2_m) * 0.5
+    
+    # Crear box con las dimensiones exactas del ROI
+    ext = [width, depth, DOOR_HEIGHT_M]
     m = trimesh.creation.box(extents=ext)
     m.apply_translation([cx, cy, DOOR_HEIGHT_M * 0.5])
-    m.apply_translation(offset)
+    
     return _colorize(m, COLOR_DOOR)
 
 # ---------- VENTANAS (CRUZ) ----------
 def _window_mesh_from_roi(p, px2m):
     """
-    Ventana con:
-      - cruz (vertical + horizontal) como antes,
-      - bloque inferior (relleno bajo la ventana) del color de muro,
-      - tapa superior (línea fina) justo sobre la ventana.
-    Todo con profundidad = espesor del muro y un pequeño offset para evitar z-fighting.
+    Ventana como marco delgado usando las dimensiones del ROI.
+    Solo muestra una cruz delgada en la posición de la ventana, sin ocupar todo el grosor del muro.
     """
-    dx, dy, cx, cy = _roi_dims_center_m(p, px2m)
-    z_center = WINDOW_SILL_M + WINDOW_HEIGHT_M * 0.5
+    x1_m = p['x1'] * px2m
+    y1_m = p['y1'] * px2m
+    x2_m = p['x2'] * px2m
+    y2_m = p['y2'] * px2m
+    
+    # Dimensiones del ROI
+    dx = abs(x2_m - x1_m)
+    dy = abs(y2_m - y1_m)
+    
+    # Centro
+    cx = (x1_m + x2_m) * 0.5
+    cy = (y1_m + y2_m) * 0.5
+    
     parts = []
+    z_center = WINDOW_SILL_M + WINDOW_HEIGHT_M * 0.5
 
-    # ----- orientación y normal del muro -----
+    # Determinar orientación del muro
     if dx >= dy:
-        # muro "horizontal": la normal está en Y
-        normal_offset = [0, +EPS_NORMAL, 0]
-
-        # 1) Cruz (color de ventana)
-        # barra vertical
-        ext_v = [WINDOW_BAR_THICK_M, WALL_THICKNESS_M, WINDOW_HEIGHT_M]
-        v = trimesh.creation.box(extents=ext_v)
-        v.apply_translation([cx, cy, z_center])
-        v.apply_translation(normal_offset)
-        _colorize(v, COLOR_WINDOW)
-        parts.append(v)
-
-        # barra horizontal
-        width = max(dx, WINDOW_BAR_THICK_M * 2)
-        ext_h = [width, WALL_THICKNESS_M, WINDOW_BAR_THICK_M]
-        h = trimesh.creation.box(extents=ext_h)
-        h.apply_translation([cx, cy, z_center])
-        h.apply_translation(normal_offset)
-        _colorize(h, COLOR_WINDOW)
-        parts.append(h)
-
-        # 2) Bloque inferior (relleno bajo la ventana) - color de muro
+        # Muro horizontal - la ventana es delgada en Y
+        # 1) Bloque inferior
         if WINDOW_SILL_M > 0:
-            ext_bottom = [dx, WALL_THICKNESS_M, WINDOW_SILL_M]
+            ext_bottom = [dx, dy, WINDOW_SILL_M]
             b = trimesh.creation.box(extents=ext_bottom)
             b.apply_translation([cx, cy, WINDOW_SILL_M * 0.5])
-            b.apply_translation(normal_offset)
             _colorize(b, COLOR_WALL)
             parts.append(b)
-
-        # 3) Tapa superior (línea fina justo arriba)
+        
+        # 2) Cruz de ventana (delgada)
+        # Barra vertical
+        ext_v = [WINDOW_BAR_THICK_M, dy, WINDOW_HEIGHT_M]
+        v = trimesh.creation.box(extents=ext_v)
+        v.apply_translation([cx, cy, z_center])
+        _colorize(v, COLOR_WINDOW)
+        parts.append(v)
+        
+        # Barra horizontal
+        ext_h = [dx, dy, WINDOW_BAR_THICK_M]
+        h = trimesh.creation.box(extents=ext_h)
+        h.apply_translation([cx, cy, z_center])
+        _colorize(h, COLOR_WINDOW)
+        parts.append(h)
+        
+        # 3) Tapa superior
         top_thick = TOP_CAP_THICK_M
         top_zc = WINDOW_SILL_M + WINDOW_HEIGHT_M + top_thick * 0.5
-        # opcional: no pasar del alto del muro
         top_zc = min(top_zc, WALL_HEIGHT_M - top_thick * 0.5)
-
-        ext_top = [dx, WALL_THICKNESS_M, top_thick]
+        ext_top = [dx, dy, top_thick]
         t = trimesh.creation.box(extents=ext_top)
         t.apply_translation([cx, cy, top_zc])
-        t.apply_translation(normal_offset)
         _colorize(t, COLOR_WINDOW)
         parts.append(t)
-
     else:
-        # muro "vertical": la normal está en X
-        normal_offset = [+EPS_NORMAL, 0, 0]
-
-        # 1) Cruz (color de ventana)
-        # barra vertical
-        ext_v = [WALL_THICKNESS_M, WINDOW_BAR_THICK_M, WINDOW_HEIGHT_M]
-        v = trimesh.creation.box(extents=ext_v)
-        v.apply_translation([cx, cy, z_center])
-        v.apply_translation(normal_offset)
-        _colorize(v, COLOR_WINDOW)
-        parts.append(v)
-
-        # barra horizontal
-        width = max(dy, WINDOW_BAR_THICK_M * 2)
-        ext_h = [WALL_THICKNESS_M, width, WINDOW_BAR_THICK_M]
-        h = trimesh.creation.box(extents=ext_h)
-        h.apply_translation([cx, cy, z_center])
-        h.apply_translation(normal_offset)
-        _colorize(h, COLOR_WINDOW)
-        parts.append(h)
-
-        # 2) Bloque inferior (relleno bajo la ventana) - color de muro
+        # Muro vertical - la ventana es delgada en X
+        # 1) Bloque inferior
         if WINDOW_SILL_M > 0:
-            ext_bottom = [WALL_THICKNESS_M, dy, WINDOW_SILL_M]
+            ext_bottom = [dx, dy, WINDOW_SILL_M]
             b = trimesh.creation.box(extents=ext_bottom)
             b.apply_translation([cx, cy, WINDOW_SILL_M * 0.5])
-            b.apply_translation(normal_offset)
             _colorize(b, COLOR_WALL)
             parts.append(b)
-
-        # 3) Tapa superior (línea fina)
+        
+        # 2) Cruz de ventana (delgada)
+        # Barra vertical
+        ext_v = [dx, WINDOW_BAR_THICK_M, WINDOW_HEIGHT_M]
+        v = trimesh.creation.box(extents=ext_v)
+        v.apply_translation([cx, cy, z_center])
+        _colorize(v, COLOR_WINDOW)
+        parts.append(v)
+        
+        # Barra horizontal
+        ext_h = [dx, dy, WINDOW_BAR_THICK_M]
+        h = trimesh.creation.box(extents=ext_h)
+        h.apply_translation([cx, cy, z_center])
+        _colorize(h, COLOR_WINDOW)
+        parts.append(h)
+        
+        # 3) Tapa superior
         top_thick = TOP_CAP_THICK_M
         top_zc = WINDOW_SILL_M + WINDOW_HEIGHT_M + top_thick * 0.5
         top_zc = min(top_zc, WALL_HEIGHT_M - top_thick * 0.5)
-
-        ext_top = [WALL_THICKNESS_M, dy, top_thick]
+        ext_top = [dx, dy, top_thick]
         t = trimesh.creation.box(extents=ext_top)
         t.apply_translation([cx, cy, top_zc])
-        t.apply_translation(normal_offset)
         _colorize(t, COLOR_WINDOW)
         parts.append(t)
 
-    # Unir piezas de la ventana
     return trimesh.util.concatenate(parts)
 
 # ---------- Orquestador ----------
 def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
     """
-    Muros SIN solapes:
-      - ROI -> Línea central
-      - buffer espesor/2 con uniones BEVEL (join_style=3) y extremos cuadrados (cap_style=2)
-      - snap + simplify para pegar vértices casi coincidentes y eliminar picos
+    Muros como rectángulos directos desde las coordenadas ROI:
+      - Cada muro se crea como un box() directamente desde x1,y1,x2,y2
+      - Los muros externos tienen mayor espesor
       - (opcional) resta de vanos
       - extrusión y reparación de mesh
     """
     px2m = _pixel_to_meter_from_det(det_json, fallback=0.01)
+    img_width = det_json.get("Width", 1000)
+    img_height = det_json.get("Height", 1000)
 
-    wall_lines = []
+    internal_wall_polys = []
+    external_wall_polys = []
     opening_polys = []
     doors, windows = [], []
 
@@ -249,8 +270,22 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
         if sc < min_score:
             continue
         if name == "wall":
-            ln, _ = _wall_centerline_from_roi(roi, px2m)
-            wall_lines.append(ln)
+            # Convertir ROI a rectángulo en metros
+            x1_m = roi['x1'] * px2m
+            y1_m = roi['y1'] * px2m
+            x2_m = roi['x2'] * px2m
+            y2_m = roi['y2'] * px2m
+            
+            # Crear rectángulo directamente desde las coordenadas
+            wall_box = box(min(x1_m, x2_m), min(y1_m, y2_m), 
+                          max(x1_m, x2_m), max(y1_m, y2_m))
+            
+            # Clasificar si es muro externo o interno
+            if _is_external_wall(roi, px2m, img_width, img_height):
+                external_wall_polys.append(wall_box)
+            else:
+                internal_wall_polys.append(wall_box)
+                
         elif name == "door":
             doors.append(_door_mesh_from_roi(roi, px2m))
             if cut_openings:
@@ -262,34 +297,22 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
             if cut_openings:
                 opening_polys.append(_opening_polygon_from_roi(roi, px2m))
 
-    if not wall_lines:
+    # Unir todos los muros (internos y externos)
+    all_wall_polys = internal_wall_polys + external_wall_polys
+    
+    if not all_wall_polys:
         return None
 
-    # 1) Unir todos los ejes de muro en un MultiLineString y hacer snap global
-    from shapely.geometry import MultiLineString
-    if len(wall_lines) == 1:
-        merged_lines = wall_lines[0]
-    else:
-        merged_lines = MultiLineString(wall_lines)
-    
-    # 2) Crear un polígono unificado a partir de todas las líneas
-    # Primero unimos todas las líneas y luego creamos un polígono a partir de ellas
-    walls_union = unary_union(merged_lines)
-    
-    # 3) Aplicar buffer para crear el grosor de las paredes
-    walls_union = walls_union.buffer(WALL_THICKNESS_M/2.0, cap_style=2, join_style=2)
-    
-    # 4) Simplificar y limpiar la geometría
-    walls_union = walls_union.simplify(TOL_SIMPLIFY, preserve_topology=True).buffer(0)
-    walls_union = snap(walls_union, walls_union, TOL_SNAP).buffer(0)
+    # Unir todos los polígonos de muros
+    walls_union = unary_union(all_wall_polys).buffer(0)
 
-    # 5) resta de vanos (si aplica) + limpieza
+    # resta de vanos (si aplica) + limpieza
     if cut_openings and opening_polys:
         openings_union = unary_union(opening_polys).buffer(0)
         walls_union = walls_union.difference(openings_union)
         walls_union = walls_union.buffer(0)
 
-    # 6) extrusión y reparación
+    # extrusión y reparación
     walls_mesh = _extrude_polygon_union(walls_union)
 
     scene = trimesh.Scene()
