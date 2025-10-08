@@ -30,12 +30,12 @@ EPS_CUT       = 0.003  # 3 mm de margen al recortar vanos
 TOL_SIMPLIFY  = 0.002  # 2 mm para simplificar contornos
 TOL_SNAP      = 0.004  # 4 mm para "pegar" vértices cercanos
 
-
+"""
 # Colores RGBA
 COLOR_WALL   = [180, 180, 180, 255]
 COLOR_DOOR   = [160, 110,  80, 255]
-COLOR_WINDOW = [120, 160, 220, 255]
-
+COLOR_WINDOW = [120, 160, 220, 255]*/
+"""
 def _pixel_to_meter_from_det(det: dict, fallback=0.01):
     """Escala a metros usando averageDoor si existe (asumimos 0.90 m de ancho puerta)."""
     avg = float(det.get("averageDoor") or 0.0)
@@ -79,7 +79,7 @@ def _opening_polygon_from_roi(p, px2m):
     else:
         return box(cx - t/2.0,   cy - dy/2.0, cx + t/2.0,   cy + dy/2.0)
 
-def _extrude_polygon_union(poly_union):
+def _extrude_polygon_union(poly_union,color=None):
     """Extruye a mesh único y lo repara para evitar caras duplicadas y z-fighting."""
     if poly_union.is_empty:
         return None
@@ -90,7 +90,7 @@ def _extrude_polygon_union(poly_union):
         if clean.is_empty:
             continue
         m = trimesh.creation.extrude_polygon(clean, height=WALL_HEIGHT_M)
-        _colorize(m, COLOR_WALL)
+        _colorize(m, color)
         # reparación del mesh
         m.remove_duplicate_faces()
         m.remove_degenerate_faces()
@@ -100,13 +100,15 @@ def _extrude_polygon_union(poly_union):
         meshes.append(m)
     return trimesh.util.concatenate(meshes) if meshes else None
 
-def _colorize(mesh: trimesh.Trimesh, rgba):
+def _colorize(mesh: trimesh.Trimesh, rgba=None):
+    if rgba is None:
+        rgba = [200, 200, 200, 255]  # color por defecto
     mesh.visual.vertex_colors = np.tile(rgba, (len(mesh.vertices), 1))
     return mesh
 
 
 # ---------- PUERTAS ----------
-def _door_mesh_from_roi(p, px2m):
+def _door_mesh_from_roi(p, px2m,color=None):
     """
     Puerta con el MISMO espesor que el muro:
       - Si el muro es horizontal: puerta extents = [ancho_X, espesor_muro, altura_puerta]
@@ -123,10 +125,10 @@ def _door_mesh_from_roi(p, px2m):
     m = trimesh.creation.box(extents=ext)
     m.apply_translation([cx, cy, DOOR_HEIGHT_M * 0.5])
     m.apply_translation(offset)
-    return _colorize(m, COLOR_DOOR)
+    return _colorize(m, color)
 
 # ---------- VENTANAS (CRUZ) ----------
-def _window_mesh_from_roi(p, px2m):
+def _window_mesh_from_roi(p, px2m,color_window=None, color_wall=None):
     """
     Ventana con:
       - cruz (vertical + horizontal) como antes,
@@ -149,7 +151,7 @@ def _window_mesh_from_roi(p, px2m):
         v = trimesh.creation.box(extents=ext_v)
         v.apply_translation([cx, cy, z_center])
         v.apply_translation(normal_offset)
-        _colorize(v, COLOR_WINDOW)
+        _colorize(v, color_window)
         parts.append(v)
 
         # barra horizontal
@@ -158,7 +160,7 @@ def _window_mesh_from_roi(p, px2m):
         h = trimesh.creation.box(extents=ext_h)
         h.apply_translation([cx, cy, z_center])
         h.apply_translation(normal_offset)
-        _colorize(h, COLOR_WINDOW)
+        _colorize(h, color_window)
         parts.append(h)
 
         # 2) Bloque inferior (relleno bajo la ventana) - color de muro
@@ -167,9 +169,9 @@ def _window_mesh_from_roi(p, px2m):
             b = trimesh.creation.box(extents=ext_bottom)
             b.apply_translation([cx, cy, WINDOW_SILL_M * 0.5])
             b.apply_translation(normal_offset)
-            _colorize(b, COLOR_WALL)
+            _colorize(b, color_wall)
             parts.append(b)
-
+##------------posible error desde aqui hasta +12 lineas
         # 3) Tapa superior (línea fina justo arriba)
         top_thick = TOP_CAP_THICK_M
         top_zc = WINDOW_SILL_M + WINDOW_HEIGHT_M + top_thick * 0.5
@@ -180,7 +182,7 @@ def _window_mesh_from_roi(p, px2m):
         t = trimesh.creation.box(extents=ext_top)
         t.apply_translation([cx, cy, top_zc])
         t.apply_translation(normal_offset)
-        _colorize(t, COLOR_WINDOW)
+        _colorize(t, color_window)
         parts.append(t)
 
     else:
@@ -193,7 +195,7 @@ def _window_mesh_from_roi(p, px2m):
         v = trimesh.creation.box(extents=ext_v)
         v.apply_translation([cx, cy, z_center])
         v.apply_translation(normal_offset)
-        _colorize(v, COLOR_WINDOW)
+        _colorize(v, color_window)
         parts.append(v)
 
         # barra horizontal
@@ -202,7 +204,7 @@ def _window_mesh_from_roi(p, px2m):
         h = trimesh.creation.box(extents=ext_h)
         h.apply_translation([cx, cy, z_center])
         h.apply_translation(normal_offset)
-        _colorize(h, COLOR_WINDOW)
+        _colorize(h, color_window)
         parts.append(h)
 
         # 2) Bloque inferior (relleno bajo la ventana) - color de muro
@@ -211,9 +213,9 @@ def _window_mesh_from_roi(p, px2m):
             b = trimesh.creation.box(extents=ext_bottom)
             b.apply_translation([cx, cy, WINDOW_SILL_M * 0.5])
             b.apply_translation(normal_offset)
-            _colorize(b, COLOR_WALL)
+            _colorize(b, color_wall)
             parts.append(b)
-
+##------------posible error hasta aqui +11 lineas
         # 3) Tapa superior (línea fina)
         top_thick = TOP_CAP_THICK_M
         top_zc = WINDOW_SILL_M + WINDOW_HEIGHT_M + top_thick * 0.5
@@ -223,14 +225,14 @@ def _window_mesh_from_roi(p, px2m):
         t = trimesh.creation.box(extents=ext_top)
         t.apply_translation([cx, cy, top_zc])
         t.apply_translation(normal_offset)
-        _colorize(t, COLOR_WINDOW)
+        _colorize(t, color_window)
         parts.append(t)
 
     # Unir piezas de la ventana
     return trimesh.util.concatenate(parts)
 
 # ---------- Orquestador ----------
-def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
+def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True,colors=None):
     """
     Muros SIN solapes:
       - ROI -> Línea central
@@ -239,6 +241,11 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
       - (opcional) resta de vanos
       - extrusión y reparación de mesh
     """
+    colors = colors or {
+        "wall": [180, 180, 180, 255],
+        "door": [160, 110, 80, 255],
+        "window": [120, 160, 220, 255]
+    }
     px2m = _pixel_to_meter_from_det(det_json, fallback=0.01)
 
     wall_lines = []
@@ -252,11 +259,11 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
             ln, _ = _wall_centerline_from_roi(roi, px2m)
             wall_lines.append(ln)
         elif name == "door":
-            doors.append(_door_mesh_from_roi(roi, px2m))
+            doors.append(_door_mesh_from_roi(roi, px2m,colors.get("door")))
             if cut_openings:
                 opening_polys.append(_opening_polygon_from_roi(roi, px2m))
         elif name == "window":
-            win = _window_mesh_from_roi(roi, px2m)
+            win = _window_mesh_from_roi(roi, px2m,color_windw=colors.get("window"), color_wall=colors.get("wall"))
             if isinstance(win, trimesh.Trimesh):
                 windows.append(win)
             if cut_openings:
@@ -286,11 +293,11 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
     # 5) resta de vanos (si aplica) + limpieza
     if cut_openings and opening_polys:
         openings_union = unary_union(opening_polys).buffer(0)
-        walls_union = walls_union.difference(openings_union)
-        walls_union = walls_union.buffer(0)
+        walls_union = walls_union.difference(openings_union).buffer(0)
+        ##walls_union = walls_union.buffer(0)
 
     # 6) extrusión y reparación
-    walls_mesh = _extrude_polygon_union(walls_union)
+    walls_mesh = _extrude_polygon_union(walls_union,color=colors.get("wall"))
 
     scene = trimesh.Scene()
     if walls_mesh is not None:
