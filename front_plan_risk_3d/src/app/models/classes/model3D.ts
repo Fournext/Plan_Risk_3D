@@ -7,13 +7,14 @@ import { ModelJson } from '../interfaces/model3D/model3D.interface';
 export class Modelo3D {
   public objeto!: THREE.Object3D;
   private onLoadCallbackList: Array<() => void> = [];
+  private loader = new THREE.TextureLoader();
 
   constructor(
     private scene: THREE.Scene,
     private url: string,
-    private position = new THREE.Vector3(0, 0, 0),
-    private scale = new THREE.Vector3(1, 1, 1),
-    private rotation = new THREE.Euler(0, 0, 0),
+    public position = new THREE.Vector3(0, 0, 0),
+    public scale = new THREE.Vector3(1, 1, 1),
+    public rotation = new THREE.Euler(0, 0, 0),
     onLoadCallback?: () => void
   ) {
     if (onLoadCallback) this.onLoadCallbackList.push(onLoadCallback);
@@ -74,37 +75,44 @@ export class Modelo3D {
       const loader = new GLTFLoader();
       loader.load(this.url, (gltf) => {
         this.objeto = gltf.scene;
-        // (… mismo ajuste de bounding box que ya tienes)
-        // 1) Aplico la escala primero
+
+        // 🔸 1. Eliminar materiales y texturas del modelo original
+        this.objeto.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+
+            // ✅ Reemplazamos cualquier material embebido
+            mesh.material = new THREE.MeshStandardMaterial({
+              color: 0x888888,         // gris neutro inicial
+              metalness: 0.2,
+              roughness: 0.8,
+              side: THREE.DoubleSide,
+            });
+          }
+        });
+
+        // 🔸 2. Centrar, escalar y posicionar como ya hacías
         this.objeto.scale.copy(this.scale);
-
-        // 2) Calculo el bounding box tras la escala
         let box = new THREE.Box3().setFromObject(this.objeto);
-        let center = box.getCenter(new THREE.Vector3());
-
-        // 3) Muevo el objeto al origen restando el centro (X, Y y Z)
+        const center = box.getCenter(new THREE.Vector3());
         this.objeto.position.sub(center);
 
-        // 4) Recalculo el bounding box para obtener la altura tras centrar
         box = new THREE.Box3().setFromObject(this.objeto);
         const height = box.getSize(new THREE.Vector3()).y;
-        const halfHeight = height / 2;
-
-        // 5) Elevo la mitad de la altura para que repose sobre Y=0
-        this.objeto.position.y += halfHeight;
-
-        // 6) Por último agrego la posición que me pasan por parámetro (offset X,Z,o Y extra si lo deseas)
+        this.objeto.position.y += height / 2;
         this.objeto.position.add(this.position);
-
-        // 7) Copio también la rotación
         this.objeto.rotation.copy(this.rotation);
 
-        // 8) Lo añado a la escena
+        // 🔸 3. Añadir a la escena
         this.scene.add(this.objeto);
 
-        // 9) Lanzo todos los callbacks registrados
+        // 🔸 4. Aplicar textura base si querés (opcional)
+        this.setTextureByName('wall', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg');
+        this.setTextureByName('door', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759888108/rosewood_veneer1_diff_1k_utjn4v.jpg');
+        this.setTextureByName('window', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759888245/depositphotos_153541450-stock-photo-glass-texture-background_ueykra.webp');
         this.onLoadCallbackList.forEach(cb => cb());
       });
+
     }
   }
 
@@ -136,25 +144,25 @@ export class Modelo3D {
     });
   }
 
-  // ✅ Cambiar solo la textura del material
-  setTexture(texture: THREE.Texture) {
-    this.objeto.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
+  // // ✅ Cambiar solo la textura del material
+  // setTexture(texture: THREE.Texture) {
+  //   this.objeto.traverse((child) => {
+  //     if ((child as THREE.Mesh).isMesh) {
+  //       const mesh = child as THREE.Mesh;
 
-        const materiales = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material];
+  //       const materiales = Array.isArray(mesh.material)
+  //         ? mesh.material
+  //         : [mesh.material];
 
-        materiales.forEach((mat) => {
-          if ((mat as THREE.MeshStandardMaterial).map !== undefined) {
-            (mat as THREE.MeshStandardMaterial).map = texture;
-            (mat as THREE.MeshStandardMaterial).needsUpdate = true;
-          }
-        });
-      }
-    });
-  }
+  //       materiales.forEach((mat) => {
+  //         if ((mat as THREE.MeshStandardMaterial).map !== undefined) {
+  //           (mat as THREE.MeshStandardMaterial).map = texture;
+  //           (mat as THREE.MeshStandardMaterial).needsUpdate = true;
+  //         }
+  //       });
+  //     }
+  //   });
+  // }
 
   // ✅ Añadir más callbacks después de haber instanciado
   addOnLoadCallback(callback: () => void) {
@@ -196,6 +204,136 @@ export class Modelo3D {
       this.scene.add(mesh);
     });
   }
+
+  // ✅ Cambiar color o material solo a ciertos objetos por nombre parcial
+  setMaterialByName(partialName: string, material: THREE.Material) {
+    if (!this.objeto) return;
+    this.objeto.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh && child.name.toLowerCase().includes(partialName.toLowerCase())) {
+        (child as THREE.Mesh).material = material;
+      }
+    });
+  }
+
+
+  setTexture(url: string) {
+    if (!this.objeto) return;
+
+    const texture = this.loader.load(url, (tex) => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(10, 4); // 🔸 ajustá la escala visual de la textura
+      tex.colorSpace = THREE.SRGBColorSpace;
+    });
+
+    this.objeto.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        const geom = mesh.geometry as THREE.BufferGeometry;
+
+        // 🧩 Generar UVs tipo proyección plana global (XZ)
+        if (!geom.attributes['uv']) {
+          geom.computeBoundingBox();
+          const bbox = geom.boundingBox!;
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          const pos = geom.attributes['position'] as THREE.BufferAttribute;
+
+          const uvArray: number[] = [];
+          for (let i = 0; i < pos.count; i++) {
+            const x = (pos.getX(i) - bbox.min.x) / size.x;
+            const z = (pos.getZ(i) - bbox.min.z) / size.z;
+            uvArray.push(x, z);
+          }
+          geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvArray, 2));
+        }
+
+        // 🎨 Nuevo material con mapa visible
+        const newMat = new THREE.MeshStandardMaterial({
+          map: texture,
+          color: 0xffffff,
+          metalness: 0.0,
+          roughness: 1.0,
+          side: THREE.DoubleSide,
+        });
+
+        mesh.material = newMat;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+  }
+
+
+
+
+
+
+  setTextureByName(partialName: string, url: string) {
+    if (!this.objeto) return;
+
+    const lowerName = partialName.toLowerCase();
+
+    const texture = this.loader.load(url, (tex) => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+
+      // 🔸 Repetición según tipo
+      if (lowerName.includes('window')) {
+        tex.repeat.set(1, 1); // solo una vez
+      } else if (lowerName.includes('door')) {
+        tex.repeat.set(2, 2);
+      } else {
+        tex.repeat.set(10, 4); // muros por defecto
+      }
+
+      tex.colorSpace = THREE.SRGBColorSpace;
+    });
+
+    this.objeto.traverse((child) => {
+      if (
+        (child as THREE.Mesh).isMesh &&
+        child.name.toLowerCase().includes(lowerName)
+      ) {
+        const mesh = child as THREE.Mesh;
+        const geom = mesh.geometry as THREE.BufferGeometry;
+
+        // 🧩 Generar UVs si no existen
+        if (!geom.attributes['uv']) {
+          geom.computeBoundingBox();
+          const bbox = geom.boundingBox!;
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+          const pos = geom.attributes['position'] as THREE.BufferAttribute;
+
+          const uvArray: number[] = [];
+          for (let i = 0; i < pos.count; i++) {
+            const x = (pos.getX(i) - bbox.min.x) / size.x;
+            const z = (pos.getZ(i) - bbox.min.z) / size.z;
+            uvArray.push(x, z);
+          }
+          geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvArray, 2));
+        }
+
+        // 🎨 Material
+        const newMat = new THREE.MeshStandardMaterial({
+          map: texture,
+          color: 0xffffff,
+          metalness: 0.1,
+          roughness: 0.9,
+          side: THREE.DoubleSide,
+          transparent: lowerName.includes('window'),
+          opacity: lowerName.includes('window') ? 0.9 : 1.0,
+        });
+
+        mesh.material = newMat;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
+  }
+
+
+
+
 
 }
 

@@ -16,8 +16,6 @@ export interface Detection {
 }
 
 export interface ModelJson {
-  points: Detection[];
+  points: { x1: number; y1: number; x2: number; y2: number }[];
   classes: { name: string }[];
-  Width: number;
-  Height: number;
 }
