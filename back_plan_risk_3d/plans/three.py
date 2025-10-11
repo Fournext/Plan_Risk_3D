@@ -256,15 +256,16 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
       - Los muros externos tienen mayor espesor
       - (opcional) resta de vanos
       - extrusión y reparación de mesh
+      - Cada muro tiene su propio identificador en la escena
     """
     px2m = _pixel_to_meter_from_det(det_json, fallback=0.01)
     img_width = det_json.get("Width", 1000)
     img_height = det_json.get("Height", 1000)
 
-    internal_wall_polys = []
-    external_wall_polys = []
+    walls = []  # Lista de tuplas (polygon, is_external, wall_index)
     opening_polys = []
     doors, windows = [], []
+    wall_index = 0
 
     for roi, name, sc in _iter_rois(det_json):
         if sc < min_score:
@@ -281,10 +282,9 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
                           max(x1_m, x2_m), max(y1_m, y2_m))
             
             # Clasificar si es muro externo o interno
-            if _is_external_wall(roi, px2m, img_width, img_height):
-                external_wall_polys.append(wall_box)
-            else:
-                internal_wall_polys.append(wall_box)
+            is_external = _is_external_wall(roi, px2m, img_width, img_height)
+            walls.append((wall_box, is_external, wall_index))
+            wall_index += 1
                 
         elif name == "door":
             doors.append(_door_mesh_from_roi(roi, px2m))
@@ -297,27 +297,27 @@ def build_scene_mesh(det_json: dict, min_score=0.0, cut_openings=True):
             if cut_openings:
                 opening_polys.append(_opening_polygon_from_roi(roi, px2m))
 
-    # Unir todos los muros (internos y externos)
-    all_wall_polys = internal_wall_polys + external_wall_polys
-    
-    if not all_wall_polys:
+    if not walls:
         return None
 
-    # Unir todos los polígonos de muros
-    walls_union = unary_union(all_wall_polys).buffer(0)
-
-    # resta de vanos (si aplica) + limpieza
-    if cut_openings and opening_polys:
-        openings_union = unary_union(opening_polys).buffer(0)
-        walls_union = walls_union.difference(openings_union)
-        walls_union = walls_union.buffer(0)
-
-    # extrusión y reparación
-    walls_mesh = _extrude_polygon_union(walls_union)
-
     scene = trimesh.Scene()
-    if walls_mesh is not None:
-        scene.add_geometry(walls_mesh, node_name="walls")
+
+    # Crear mesh individual para cada muro
+    for wall_poly, is_external, w_idx in walls:
+        # Aplicar recortes de vanos si está habilitado
+        final_wall_poly = wall_poly
+        if cut_openings and opening_polys:
+            openings_union = unary_union(opening_polys).buffer(0)
+            final_wall_poly = wall_poly.difference(openings_union)
+            final_wall_poly = final_wall_poly.buffer(0)
+
+        # Crear mesh individual
+        wall_mesh = _extrude_polygon_union(final_wall_poly)
+        if wall_mesh is not None:
+            # Nombre específico según tipo de muro
+            wall_type = "external" if is_external else "internal"
+            node_name = f"wall_{wall_type}_{w_idx}"
+            scene.add_geometry(wall_mesh, node_name=node_name)
 
     for i, m in enumerate(doors):
         scene.add_geometry(m, node_name=f"door_{i}")
