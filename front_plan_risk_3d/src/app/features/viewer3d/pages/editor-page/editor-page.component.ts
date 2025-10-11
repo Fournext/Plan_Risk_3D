@@ -6,8 +6,9 @@ import {
   ViewChild,
   inject,
   PLATFORM_ID,
+  signal,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { DecimalPipe, isPlatformBrowser } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Modelo3D } from '../../../../models/classes/model3D';
@@ -15,7 +16,7 @@ import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-editor-page',
-  imports: [],
+  imports: [DecimalPipe],
   templateUrl: './editor-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -32,6 +33,36 @@ export class EditorPageComponent {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private controls!: OrbitControls;
+  //vamos a guardar la instancia del modelo
+  private modelo3D!: Modelo3D;
+
+
+
+  // 🔹 Estados del panel de control
+  posX = signal<number>(0);
+  posY = signal<number>(0);
+  posZ = signal<number>(0);
+  rotationY = signal<number>(0);
+  rotationX = signal<number>(0);
+  scale = signal<number>(1);
+  color = signal<string>('#ffffff');
+  //----
+  selectedType = signal<'all' | 'wall' | 'door' | 'window'>('all');
+
+  // Texturas precargadas
+  textures = [
+    { name: 'Ladrillo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg' },
+    { name: 'Piedra', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883265/plaster_brick_pattern_disp_1k_awiqtc.png' },
+    { name: 'Cemento', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883245/cracked_concrete_wall_disp_1k_sstfyd.png' },
+    {name: 'Madera 1', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894564/plywood_diff_1k_yle5d5.jpg' },
+    {name: 'Madera 2', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894554/wooden_gate_diff_1k_wjzhjf.jpg' },
+    { name: 'Medera 3', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894546/worn_planks_diff_1k_k9xbdg.jpg' },
+  ];
+
+
+  // Selecciones del usuario
+  selectedPart = signal<'walls' | 'door' | 'window'>('walls');
+  selectedTexture = signal(this.textures[0].url);
 
   ngAfterViewInit(): void {
 
@@ -131,7 +162,7 @@ export class EditorPageComponent {
 
     floorTexture.colorSpace = THREE.SRGBColorSpace;
 
-    const floorGeometry = new THREE.PlaneGeometry(30, 30);
+    const floorGeometry = new THREE.PlaneGeometry(40, 40);
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0; // al nivel del grid
@@ -147,9 +178,9 @@ export class EditorPageComponent {
 
     //url del modelo
     //const url = 'https://cdn.jsdelivr.net/gh/BrayanQuispe24/mis-modelos-3d@main/models/cartoon_cyberpunk_building.glb';
-    const url = `http://ec2-18-222-5-143.us-east-2.compute.amazonaws.com:8000${model.glb_model}`;
+    const url = `http://localhost:8000${model.glb_model}`;
     // 5) Cargar modelo 3D
-    const modelo = new Modelo3D(
+    this.modelo3D = new Modelo3D(
       this.scene,
       url,
       new THREE.Vector3(0, 0, 0),
@@ -157,6 +188,13 @@ export class EditorPageComponent {
       new THREE.Euler(0, 0, 0),
       () => {
         console.log('Modelo cargado');
+        const obj = this.modelo3D.getObject3D();
+        this.posX.set(obj.position.x);
+        this.posY.set(obj.position.y);
+        this.posZ.set(obj.position.z);
+        this.rotationY.set(obj.rotation.y);
+        this.rotationX.set(obj.rotation.x);
+        this.scale.set(obj.scale.x);
       }
     );
 
@@ -183,4 +221,70 @@ export class EditorPageComponent {
       el.scrollIntoView({ behavior: 'smooth' });
     }
   }
+
+  // 🧱 Handlers para sliders
+  onRotationYChange(value: string) {
+    if (!this.modelo3D) return;
+    this.rotationY.set(parseFloat(value));
+    this.modelo3D.setRotation(0, this.rotationY(), 0);
+  }
+
+  onRotationXChange(value: string) {
+    if (!this.modelo3D) return;
+    this.rotationX.set(parseFloat(value));
+    this.modelo3D.setRotation(0, this.rotationY(), this.rotationX());
+  }
+
+  onScaleChange(value: string) {
+    if (!this.modelo3D) return;
+    this.scale.set(parseFloat(value));
+    this.modelo3D.setScale(this.scale(), this.scale(), this.scale());
+  }
+
+  onColorChange(value: string) {
+    if (!this.modelo3D) return;
+    if (this.selectedTexture() !== '') return;
+    this.color.set(value);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(value),
+      metalness: 0.3,
+      roughness: 0.7,
+    });
+
+    // 🔸 Nuevo comportamiento
+    const type = this.selectedType();
+    if (type === 'all') {
+      this.modelo3D.setMaterial(mat);
+    } else {
+      this.modelo3D.setMaterialByName(type, mat);
+    }
+  }
+
+
+  onPosXChange(value: string) {
+    if (!this.modelo3D) return;
+    this.posX.set(parseFloat(value));
+    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+  }
+
+  onPosYChange(value: string) {
+    if (!this.modelo3D) return;
+    this.posY.set(parseFloat(value));
+    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+  }
+
+  onPosZChange(value: string) {
+    if (!this.modelo3D) return;
+    this.posZ.set(parseFloat(value));
+    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+  }
+  onTextureChange(url: string) {
+    this.selectedTexture.set(url);
+    if (!this.modelo3D) return;
+
+    const part = this.selectedPart();
+      this.modelo3D.setTextureByName(part, url);
+  }
+
 }

@@ -21,6 +21,15 @@ export class ModelsService {
     )
   }
 
+  uploadModels(file: File, usuario: number): Observable<Model3D> {
+    const formData = new FormData();
+    formData.append('plan_file', file);
+    formData.append('usuario', usuario.toString());
+    return this.http.post<Model3D>(`${this.API}api/set_plan/plans/`, formData ).pipe(
+      tap(() => this.getModels().subscribe())
+    )
+  }
+
   constructor() { }
 
 }
