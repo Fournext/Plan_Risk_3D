@@ -8,6 +8,10 @@ export class Modelo3D {
   public objeto!: THREE.Object3D;
   private onLoadCallbackList: Array<() => void> = [];
   private loader = new THREE.TextureLoader();
+  private walls: THREE.Mesh[] = [];
+  private doors: THREE.Mesh[] = [];
+  private windows: THREE.Mesh[] = [];
+
 
   constructor(
     private scene: THREE.Scene,
@@ -76,20 +80,28 @@ export class Modelo3D {
       loader.load(this.url, (gltf) => {
         this.objeto = gltf.scene;
 
-        // 🔸 1. Eliminar materiales y texturas del modelo original
         this.objeto.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
 
-            // ✅ Reemplazamos cualquier material embebido
             mesh.material = new THREE.MeshStandardMaterial({
-              color: 0x888888,         // gris neutro inicial
+              color: 0x888888,
               metalness: 0.2,
               roughness: 0.8,
               side: THREE.DoubleSide,
             });
+
+            mesh.name = child.name || `mesh_${THREE.MathUtils.generateUUID()}`;
+
+            // 🧱 Clasificar por tipo (nombre parcial o palabra clave)
+            const lname = mesh.name.toLowerCase();
+            if (lname.includes('wall')) this.walls.push(mesh);
+            else if (lname.includes('door')) this.doors.push(mesh);
+            else if (lname.includes('window')) this.windows.push(mesh);
           }
         });
+
+
 
         // 🔸 2. Centrar, escalar y posicionar como ya hacías
         this.objeto.scale.copy(this.scale);
@@ -144,25 +156,6 @@ export class Modelo3D {
     });
   }
 
-  // // ✅ Cambiar solo la textura del material
-  // setTexture(texture: THREE.Texture) {
-  //   this.objeto.traverse((child) => {
-  //     if ((child as THREE.Mesh).isMesh) {
-  //       const mesh = child as THREE.Mesh;
-
-  //       const materiales = Array.isArray(mesh.material)
-  //         ? mesh.material
-  //         : [mesh.material];
-
-  //       materiales.forEach((mat) => {
-  //         if ((mat as THREE.MeshStandardMaterial).map !== undefined) {
-  //           (mat as THREE.MeshStandardMaterial).map = texture;
-  //           (mat as THREE.MeshStandardMaterial).needsUpdate = true;
-  //         }
-  //       });
-  //     }
-  //   });
-  // }
 
   // ✅ Añadir más callbacks después de haber instanciado
   addOnLoadCallback(callback: () => void) {
@@ -173,6 +166,10 @@ export class Modelo3D {
   getObject3D(): THREE.Object3D {
     return this.objeto;
   }
+  getWalls(): THREE.Mesh[] { return this.walls; }
+  getDoors(): THREE.Mesh[] { return this.doors; }
+  getWindows(): THREE.Mesh[] { return this.windows; }
+
 
   private buildFromDetections(model: ModelJson) {
     const scale = 0.01; // Escalar píxeles → unidades Three.js

@@ -13,6 +13,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Modelo3D } from '../../../../models/classes/model3D';
 import { environment } from '../../../../../environments/environment';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+
 
 @Component({
   selector: 'app-editor-page',
@@ -35,7 +37,11 @@ export class EditorPageComponent {
   private controls!: OrbitControls;
   //vamos a guardar la instancia del modelo
   private modelo3D!: Modelo3D;
-
+  // --- Selección del objeto ---
+  private raycaster = new THREE.Raycaster();
+  private mouse = new THREE.Vector2();
+  private selectedMesh: THREE.Mesh | null = null;
+  private transformControls!: TransformControls;
 
 
   // 🔹 Estados del panel de control
@@ -54,8 +60,8 @@ export class EditorPageComponent {
     { name: 'Ladrillo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg' },
     { name: 'Piedra', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883265/plaster_brick_pattern_disp_1k_awiqtc.png' },
     { name: 'Cemento', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883245/cracked_concrete_wall_disp_1k_sstfyd.png' },
-    {name: 'Madera 1', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894564/plywood_diff_1k_yle5d5.jpg' },
-    {name: 'Madera 2', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894554/wooden_gate_diff_1k_wjzhjf.jpg' },
+    { name: 'Madera 1', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894564/plywood_diff_1k_yle5d5.jpg' },
+    { name: 'Madera 2', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894554/wooden_gate_diff_1k_wjzhjf.jpg' },
     { name: 'Medera 3', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894546/worn_planks_diff_1k_k9xbdg.jpg' },
   ];
 
@@ -143,6 +149,16 @@ export class EditorPageComponent {
     lightLeft.target.position.copy(target);
     this.scene.add(lightLeft);
     this.scene.add(lightLeft.target);
+    // --- TransformControls (gizmo para mover/rotar/escalar)
+    this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+    this.scene.add(this.transformControls as unknown as THREE.Object3D);
+
+
+    // 🔸 Bloquear OrbitControls mientras se arrastra un objeto
+    this.transformControls.addEventListener('dragging-changed', (event) => {
+      this.controls.enabled = !event.value;
+    });
+
 
 
     //suelo
@@ -189,12 +205,26 @@ export class EditorPageComponent {
       () => {
         console.log('Modelo cargado');
         const obj = this.modelo3D.getObject3D();
+
+        const walls = this.modelo3D.getWalls();
+        if (walls.length >= 2) {
+          console.log(
+            "Material del primer muro === segundo muro?",
+            walls[0].material === walls[1].material
+          );
+        } else {
+          console.warn("No hay al menos dos muros para comparar:", walls.length);
+        }
+
+
         this.posX.set(obj.position.x);
         this.posY.set(obj.position.y);
         this.posZ.set(obj.position.z);
         this.rotationY.set(obj.rotation.y);
         this.rotationX.set(obj.rotation.x);
         this.scale.set(obj.scale.x);
+
+
       }
     );
 
@@ -212,6 +242,8 @@ export class EditorPageComponent {
       this.camera.aspect = clientWidth / clientHeight;
       this.camera.updateProjectionMatrix();
     });
+    canvas.addEventListener('click', this.onCanvasClick.bind(this));
+
   }
 
   scrollTo(event: MouseEvent, id: string) {
@@ -235,11 +267,6 @@ export class EditorPageComponent {
     this.modelo3D.setRotation(0, this.rotationY(), this.rotationX());
   }
 
-  onScaleChange(value: string) {
-    if (!this.modelo3D) return;
-    this.scale.set(parseFloat(value));
-    this.modelo3D.setScale(this.scale(), this.scale(), this.scale());
-  }
 
   onColorChange(value: string) {
     if (!this.modelo3D) return;
@@ -263,28 +290,86 @@ export class EditorPageComponent {
 
 
   onPosXChange(value: string) {
-    if (!this.modelo3D) return;
-    this.posX.set(parseFloat(value));
-    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+    const val = parseFloat(value);
+    this.posX.set(val);
+    if (this.selectedMesh) this.selectedMesh.position.x = val;
+    else this.modelo3D.setPosition(val, this.posY(), this.posZ());
   }
 
   onPosYChange(value: string) {
-    if (!this.modelo3D) return;
-    this.posY.set(parseFloat(value));
-    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+    const val = parseFloat(value);
+    this.posY.set(val);
+    if (this.selectedMesh) this.selectedMesh.position.y = val;
+    else this.modelo3D.setPosition(this.posX(), val, this.posZ());
   }
 
   onPosZChange(value: string) {
-    if (!this.modelo3D) return;
-    this.posZ.set(parseFloat(value));
-    this.modelo3D.setPosition(this.posX(), this.posY(), this.posZ());
+    const val = parseFloat(value);
+    this.posZ.set(val);
+    if (this.selectedMesh) this.selectedMesh.position.z = val;
+    else this.modelo3D.setPosition(this.posX(), this.posY(), val);
   }
+
+  onScaleChange(value: string) {
+    const val = parseFloat(value);
+    this.scale.set(val);
+    if (this.selectedMesh) this.selectedMesh.scale.set(val, val, val);
+    else this.modelo3D.setScale(val, val, val);
+  }
+
   onTextureChange(url: string) {
     this.selectedTexture.set(url);
     if (!this.modelo3D) return;
 
     const part = this.selectedPart();
-      this.modelo3D.setTextureByName(part, url);
+    this.modelo3D.setTextureByName(part, url);
   }
+
+
+  private onCanvasClick(event: MouseEvent) {
+    if (!this.modelo3D) return;
+
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // intersecta solo objetos visibles y con geometría
+    const allObjects = [
+      ...this.modelo3D.getWalls(),
+      ...this.modelo3D.getDoors(),
+      ...this.modelo3D.getWindows(),
+    ];
+    const intersects = this.raycaster.intersectObjects(allObjects, true);
+
+
+    if (intersects.length > 0) {
+      const mesh = intersects[0].object as THREE.Mesh;
+
+      // 🔸 Desactiva selección anterior
+      if (this.selectedMesh && this.selectedMesh !== mesh) {
+        const prevMat = this.selectedMesh.material as THREE.MeshStandardMaterial;
+        prevMat.emissive.setHex(0x000000);
+      }
+
+      // 🔸 Activa selección actual
+      this.selectedMesh = mesh;
+      const mat = mesh.material as THREE.MeshStandardMaterial;
+      mat.emissive.setHex(0x333333);
+
+      this.transformControls.attach(mesh);
+      console.log("Seleccionado:", mesh.name);
+    } else {
+      if (this.selectedMesh) {
+        const prevMat = this.selectedMesh.material as THREE.MeshStandardMaterial;
+        prevMat.emissive.setHex(0x000000);
+      }
+      this.selectedMesh = null;
+      this.transformControls.detach();
+    }
+  }
+
+
 
 }
