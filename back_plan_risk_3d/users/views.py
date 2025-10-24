@@ -18,8 +18,6 @@ from rest_framework.views import APIView
 from .auth import JWTAuthentication
 
 
-
-
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer

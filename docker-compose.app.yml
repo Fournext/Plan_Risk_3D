@@ -6,7 +6,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_DB=plan_risk_db
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=8960406
+      - POSTGRES_PASSWORD=071104
       - CORS_ALLOWED_ORIGINS=http://localhost:4000,http://angular-app:4000
     volumes:
       - ./back_plan_risk_3d:/app

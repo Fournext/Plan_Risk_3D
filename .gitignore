@@ -12,9 +12,6 @@ __pycache__/
 *.pyd
 .Python
 
-__pycache__/
-**/__pycache__/
-
 # Archivos de configuración de IDEs
 .vscode/
 .idea/
