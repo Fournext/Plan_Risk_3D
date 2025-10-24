@@ -53,6 +53,13 @@ export class EditorPageComponent {
   scale = signal<number>(1);
   color = signal<string>('#ffffff');
   //----
+  selectedWidth = signal<number>(1);
+  selectedHeight = signal<number>(1);
+  selectedDepth = signal<number>(1);
+  hasSelection = signal<boolean>(false);
+
+
+  //-----
   selectedType = signal<'all' | 'wall' | 'door' | 'window'>('all');
 
   // Texturas precargadas
@@ -67,7 +74,7 @@ export class EditorPageComponent {
 
 
   // Selecciones del usuario
-  selectedPart = signal<'walls' | 'door' | 'window'>('walls');
+  selectedPart = signal<'walls' | 'door' | 'window' | 'wall_internal'>('walls');
   selectedTexture = signal(this.textures[0].url);
 
   ngAfterViewInit(): void {
@@ -75,19 +82,24 @@ export class EditorPageComponent {
 
     // Ejecutar solo en cliente
     if (!isPlatformBrowser(this.platformId)) return;
+    // ✅ Leer modelo desde localStorage
     const modeljson = localStorage.getItem('modelo');
     let model: any = null;
 
     if (modeljson) {
       try {
         model = JSON.parse(modeljson);
-        console.log("Modelo parseado:", model);
+        console.log("✅ Modelo parseado:", model);
       } catch (err) {
-        console.error("Error al parsear JSON del modelo:", err);
+        console.error("⚠️ Error al parsear JSON del modelo:", err);
+        localStorage.removeItem('modelo'); // limpia si está corrupto
       }
     } else {
-      console.warn("No hay modelo guardado en localStorage");
+      console.warn("⚠️ No hay modelo guardado en localStorage");
+      // 🔹 Opción: asignar un modelo por defecto si querés
+      // model = { glb_model: '/media/models/mimodelo.glb' };
     }
+
 
 
     // 1) Preparar renderer y tamaño inicial
@@ -154,6 +166,7 @@ export class EditorPageComponent {
     this.scene.add(this.transformControls as unknown as THREE.Object3D);
 
 
+
     // 🔸 Bloquear OrbitControls mientras se arrastra un objeto
     this.transformControls.addEventListener('dragging-changed', (event) => {
       this.controls.enabled = !event.value;
@@ -184,49 +197,35 @@ export class EditorPageComponent {
     floor.position.y = 0; // al nivel del grid
     this.scene.add(floor);
 
-    // --- GridHelper encima del suelo ---
-    // const grid = new THREE.GridHelper(30, 30, 0x00ff00, 0x555555);
-    // (grid.material as THREE.Material).opacity = 0.3;  // medio transparente
-    // (grid.material as THREE.Material).transparent = true;
-    // this.scene.add(grid);
-
-
-
-    //url del modelo
-    //const url = 'https://cdn.jsdelivr.net/gh/BrayanQuispe24/mis-modelos-3d@main/models/cartoon_cyberpunk_building.glb';
     const url = `http://localhost:8000${model.glb_model}`;
     // 5) Cargar modelo 3D
-    this.modelo3D = new Modelo3D(
-      this.scene,
-      url,
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(1, 1, 1),
-      new THREE.Euler(0, 0, 0),
-      () => {
-        console.log('Modelo cargado');
-        const obj = this.modelo3D.getObject3D();
-
-        const walls = this.modelo3D.getWalls();
-        if (walls.length >= 2) {
-          console.log(
-            "Material del primer muro === segundo muro?",
-            walls[0].material === walls[1].material
-          );
-        } else {
-          console.warn("No hay al menos dos muros para comparar:", walls.length);
-        }
-
-
-        this.posX.set(obj.position.x);
-        this.posY.set(obj.position.y);
-        this.posZ.set(obj.position.z);
-        this.rotationY.set(obj.rotation.y);
-        this.rotationX.set(obj.rotation.x);
-        this.scale.set(obj.scale.x);
-
-
+    // 🕒 Retraso breve para asegurar que el canvas y la escena estén listos
+    setTimeout(() => {
+      if (!model || !model.glb_model) {
+        console.warn('⚠️ No se encontró modelo en localStorage.');
+        return;
       }
-    );
+
+      const url = `http://localhost:8000${model.glb_model}`;
+      console.log('🧱 Cargando modelo desde:', url);
+
+      this.modelo3D = new Modelo3D(
+        this.scene,
+        url,
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(1, 1, 1),
+        new THREE.Euler(0, 0, 0),
+        this.textures,
+        () => {
+          console.log('✅ Modelo cargado correctamente');
+          const obj = this.modelo3D.getObject3D();
+          this.posX.set(obj.position.x);
+          this.posY.set(obj.position.y);
+          this.posZ.set(obj.position.z);
+        }
+      );
+    }, 300);
+
 
     // 6) Loop de animación
     const animate = () => {
@@ -310,23 +309,94 @@ export class EditorPageComponent {
     else this.modelo3D.setPosition(this.posX(), this.posY(), val);
   }
 
-  onScaleChange(value: string) {
+  onScaleChange(axis: 'x' | 'y' | 'z', value: string) {
+    if (!this.selectedMesh) return;
+    const mesh = this.selectedMesh;
     const val = parseFloat(value);
-    this.scale.set(val);
-    if (this.selectedMesh) this.selectedMesh.scale.set(val, val, val);
-    else this.modelo3D.setScale(val, val, val);
+    if (isNaN(val)) return;
+
+    // 🧱 Guardar bounding box antes de escalar
+    const boxBefore = new THREE.Box3().setFromObject(mesh);
+    const centerBefore = boxBefore.getCenter(new THREE.Vector3());
+    const minBefore = boxBefore.min.clone();
+
+    // 🧱 Aplicar escala
+    if (axis === 'x') mesh.scale.x = val;
+    if (axis === 'y') mesh.scale.y = val;
+    if (axis === 'z') mesh.scale.z = val;
+
+    mesh.updateMatrixWorld(true);
+
+    // 🧱 Bounding box después de escalar
+    const boxAfter = new THREE.Box3().setFromObject(mesh);
+    const centerAfter = boxAfter.getCenter(new THREE.Vector3());
+    const minAfter = boxAfter.min.clone();
+
+    // 🧩 Compensar desplazamiento según eje
+    if (axis === 'z') {
+      // ✅ Crece solo hacia arriba (mantiene base inferior fija)
+      const deltaZ = minBefore.z - minAfter.z;
+      mesh.position.z += deltaZ;
+    } else {
+      // ✅ Mantiene el centro para X y Y
+      const offset = new THREE.Vector3().subVectors(centerBefore, centerAfter);
+      mesh.position.add(offset);
+    }
+
+    mesh.updateMatrixWorld(true);
+
+    // 🧩 🔹 Ajustar textura SOLO del objeto seleccionado (si existe)
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    const matAny = material as any;
+
+    if (material.map) {
+      // Clonar material si está compartido
+      if (matAny.isShared !== false) {
+        const newMat = material.clone() as any;
+        if (material.map) {
+          newMat.map = material.map.clone();
+          newMat.map.needsUpdate = true;
+        }
+        newMat.isShared = false;
+        mesh.material = newMat;
+      }
+
+      // 🔥 Ajustar repetición en función de la escala (más escala → más repeticiones)
+      const mat = mesh.material as THREE.MeshStandardMaterial;
+      if (mat.map) {
+        mat.map.repeat.set(
+          mesh.scale.x * 2, // multiplicá por 2 o más para aumentar densidad
+          mesh.scale.y * 2
+        );
+        mat.map.needsUpdate = true;
+      }
+    }
   }
+
+
+
+
+
+
 
   onTextureChange(url: string) {
     this.selectedTexture.set(url);
     if (!this.modelo3D) return;
 
-    const part = this.selectedPart();
+    // 🔹 Traducción interna para coincidir con los nombres reales
+    let part = this.selectedPart();
+    if (part === 'walls') part = 'wall_internal';
+
+    // 🔹 Aplicar textura solo a esa parte
     this.modelo3D.setTextureByName(part, url);
+    console.log(`✅ Textura aplicada a: ${part}`);
   }
 
 
+
   private onCanvasClick(event: MouseEvent) {
+
+
     if (!this.modelo3D) return;
 
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
@@ -346,15 +416,17 @@ export class EditorPageComponent {
 
     if (intersects.length > 0) {
       const mesh = intersects[0].object as THREE.Mesh;
-
-      // 🔸 Desactiva selección anterior
-      if (this.selectedMesh && this.selectedMesh !== mesh) {
-        const prevMat = this.selectedMesh.material as THREE.MeshStandardMaterial;
-        prevMat.emissive.setHex(0x000000);
-      }
-
-      // 🔸 Activa selección actual
       this.selectedMesh = mesh;
+      this.hasSelection.set(true); // ✅ ahora Angular sabe que hay selección
+
+      // Calcular tamaño actual
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      this.selectedWidth.set(size.x);
+      this.selectedHeight.set(size.y);
+      this.selectedDepth.set(size.z);
+
       const mat = mesh.material as THREE.MeshStandardMaterial;
       mat.emissive.setHex(0x333333);
 
@@ -367,8 +439,86 @@ export class EditorPageComponent {
       }
       this.selectedMesh = null;
       this.transformControls.detach();
+      this.hasSelection.set(false); // ✅ sin selección
+    }
+
+  }
+
+  onDimensionChange(axis: 'x' | 'y', value: string) {
+    if (!this.selectedMesh) return;
+    const mesh = this.selectedMesh;
+    const newVal = parseFloat(value);
+    if (isNaN(newVal)) return;
+
+    // 🧱 Obtener dimensiones originales de la geometría
+    const geom = mesh.geometry as THREE.BoxGeometry;
+    const params = geom.parameters;
+
+    // 🔹 Si el modelo viene de un GLTF, puede no tener parámetros → estimamos
+    const oldX = params.width ?? 1;
+    const oldY = params.height ?? 1;
+    const oldZ = params.depth ?? 0.1; // ✅ Grosor fijo por defecto
+
+    let newX = oldX;
+    let newY = oldY;
+    const newZ = oldZ; // 🔒 Z nunca cambia
+
+    if (axis === 'x') newX = newVal;
+    if (axis === 'y') newY = newVal;
+
+    // 🧩 Guardar posición y rotación actuales
+    const oldPos = mesh.position.clone();
+    const oldRot = mesh.rotation.clone();
+
+    // 🧩 Reemplazar geometría
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.BoxGeometry(newX, newY, newZ);
+
+    // 🧩 Restaurar rotación
+    mesh.rotation.copy(oldRot);
+
+    // 🧩 Mantener base en el suelo si cambia Y
+    if (axis === 'y') {
+      const deltaY = (newY - oldY) / 2;
+      mesh.position.set(oldPos.x, oldPos.y + deltaY, oldPos.z);
+    } else {
+      mesh.position.copy(oldPos);
+    }
+
+    // 🧩 Forzar actualización
+    (mesh.material as THREE.MeshStandardMaterial).needsUpdate = true;
+
+    // 🧩 Actualizar señales
+    this.selectedWidth.set(newX);
+    this.selectedHeight.set(newY);
+    this.selectedDepth.set(newZ);
+  }
+
+
+
+
+
+  onExportModel() {
+    if (this.modelo3D) {
+      this.modelo3D.exportAsGLB('modelo_exportado.glb');
+    } else {
+      console.warn('⚠️ No hay modelo cargado');
     }
   }
+
+  onExportJSON() {
+    if (!this.modelo3D) return;
+    const summary = this.modelo3D.toJSONSummary();
+    const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modelo_resumen.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+
 
 
 
