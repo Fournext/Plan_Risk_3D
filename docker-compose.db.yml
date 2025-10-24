@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=071104 
+      - POSTGRES_PASSWORD=8960406 
       - POSTGRES_DB=plan_risk_db
     ports:
       - "5432:5432"

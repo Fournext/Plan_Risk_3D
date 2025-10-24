@@ -15,11 +15,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class RegistroSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['id', 'nombre', 'email', 'password']
+        fields = ['id', 'nombre', 'email', 'password','fecha_expiracion_plan']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        print("📥 Datos recibidos en el serializer:", validated_data)
         validated_data['password'] = make_password(validated_data['password'])
-        validated_data['rol'] = 'usuario_normal'
+        ##validated_data['rol'] = 'usuario_normal'
         return super().create(validated_data)
 

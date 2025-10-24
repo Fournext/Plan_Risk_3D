@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 import os
 from rest_framework.decorators import action
+
 from rest_framework.response import Response
 from rest_framework import status, viewsets, generics, status
 
@@ -15,6 +16,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework.views import APIView
 from .auth import JWTAuthentication
+
+
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -60,6 +63,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 
 class RegistroView(generics.CreateAPIView):
+    ##print("📥 Datos recibidos en el en RegistroView:")
     queryset = Usuario.objects.all()
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
