@@ -1,5 +1,5 @@
 # plans/views.py
-import io, json
+import io, json, os, tempfile
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes
@@ -16,16 +16,57 @@ from rest_framework.decorators import permission_classes
 
 def process_and_save_glb(job, det):
     """
-    Paso 6 y 7: Generar GLB en memoria, guardar, actualizar metadatos y guardar el job.
+    Paso 6 y 7: Generar GLB en memoria, guardar, actualizar metadatos y registrar en blockchain.
     """
+    import io, json, hashlib
+    from django.core.files.base import ContentFile
     from .three import build_scene_mesh, export_glb
+    from .onchain import register_on_chain
+
+    # ===== 1) Generar el modelo 3D (GLB) =====
     mesh = build_scene_mesh(det, min_score=0.0, cut_openings=True)
     if mesh is not None:
         glb_buf = io.BytesIO()
         export_glb(mesh, glb_buf)
         job.glb_model.save(f'job_{job.id}.glb', ContentFile(glb_buf.getvalue()), save=False)
+
+    # ===== 2) Guardar dimensiones =====
     job.width = det.get("Width", 0)
     job.height = det.get("Height", 0)
+
+    # ===== 3) Calcular hashes SHA256 =====
+    json_bytes = json.dumps(det, ensure_ascii=False).encode('utf-8')
+    sha_json = hashlib.sha256(json_bytes).hexdigest()
+    sha_glb = hashlib.sha256(glb_buf.getvalue()).hexdigest() if mesh is not None else ""
+    sha_img = hashlib.sha256(b"placeholder_image").hexdigest()  # opcional (si tienes una imagen)
+
+    # ===== 4) (Opcional) Subir a IPFS =====
+    # Si aún no usas IPFS, deja los CIDs fijos. Luego puedes integrar ipfs_client.py
+    cid_img = "bafy-placeholder-img"
+    cid_json = "bafy-placeholder-json"
+    cid_glb = "bafy-placeholder-glb"
+    cid_meta = "bafy-placeholder-meta"
+
+    # ===== 5) Registrar en la blockchain Polygon Amoy =====
+    try:
+        tx_hash = register_on_chain(
+            job.id,
+            cid_img,
+            cid_json,
+            cid_glb,
+            "0x" + sha_img,
+            "0x" + sha_json,
+            "0x" + sha_glb,
+            cid_meta
+        )
+        if tx_hash:
+            print(f"✅ Modelo registrado en blockchain. Tx: {tx_hash}")
+            print(f"🔍 Ver en: https://amoy.polygonscan.com/tx/{tx_hash}")
+            job.blockchain_tx = tx_hash  # campo opcional en tu modelo (añádelo si no existe)
+    except Exception as e:
+        print(f"⚠️ No se pudo registrar en blockchain: {e}")
+
+    # ===== 6) Guardar job =====
     job.save()
     return job
 
@@ -164,3 +205,32 @@ def get_lista_modelos(request, format=None):
     jobs = Plan3DJob.objects.filter(usuario=request.user)
     ser = Plan3DJobSerializer(jobs, many=True)
     return Response(ser.data, status=status.HTTP_200_OK)
+
+# POST: Validar plano 3D contra blockchain
+@api_view(['POST'])
+def validar_plano(request):
+    """
+    Recibe un job_id y los archivos (JSON, GLB, imagen) para verificar autenticidad.
+    """
+    from .validator import validate_plan
+
+    job_id = request.data.get("job_id")
+    json_file = request.FILES.get("json_file")
+    glb_file = request.FILES.get("glb_file")
+    img_file = request.FILES.get("img_file")
+
+    # Guardar temporalmente los archivos recibidos
+    tmp_dir = tempfile.gettempdir()
+    temp_json = os.path.join(tmp_dir, "tmp_json.json")
+    temp_glb = os.path.join(tmp_dir, "tmp_model.glb")
+    temp_img = os.path.join(tmp_dir, "tmp_image.png")
+
+    if json_file:
+        with open(temp_json, 'wb') as f: f.write(json_file.read())
+    if glb_file:
+        with open(temp_glb, 'wb') as f: f.write(glb_file.read())
+    if img_file:
+        with open(temp_img, 'wb') as f: f.write(img_file.read())
+
+    result = validate_plan(job_id, temp_json, temp_glb, temp_img)
+    return Response(result)
