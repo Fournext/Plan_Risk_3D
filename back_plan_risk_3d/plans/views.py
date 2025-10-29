@@ -164,3 +164,54 @@ def get_lista_modelos(request, format=None):
     jobs = Plan3DJob.objects.filter(usuario=request.user)
     ser = Plan3DJobSerializer(jobs, many=True)
     return Response(ser.data, status=status.HTTP_200_OK)
+
+
+#reemplazar archivo glb de un job existente
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def reemplazar_glb(request):
+    """
+    Reemplaza un archivo GLB existente basado en el nombre del archivo recibido.
+    Espera:
+      - file_glb: archivo .glb (por ejemplo "job_2.glb")
+      - usuario: id del usuario que realiza la acción
+    """
+    new_glb = request.FILES.get('file_glb')
+    usuario_id = request.data.get('usuario')
+
+    try:
+        usuario = Usuario.objects.get(id=usuario_id)
+    except Usuario.DoesNotExist:
+        return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if not new_glb:
+        return Response({"detail": "No se envió archivo .glb"}, status=status.HTTP_400_BAD_REQUEST)
+    # Extraer el ID del nombre del archivo (ejemplo: job_2.glb → 2)
+    import re
+    match = re.search(r'job_(\d+)\.glb$', new_glb.name)
+    if not match:
+        return Response({"detail": "Nombre de archivo no válido (debe ser job_<id>.glb)"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    job_id = int(match.group(1))
+
+    # Buscar el job
+    try:
+        job = Plan3DJob.objects.get(id=job_id)
+    except Plan3DJob.DoesNotExist:
+        return Response({"detail": f"No existe Plan3DJob con id {job_id}"}, status=status.HTTP_404_NOT_FOUND)
+
+
+    # Reemplazar el archivo
+    if job.glb_model:
+        job.glb_model.delete(save=False)
+
+    job.glb_model.save(new_glb.name, new_glb, save=True)
+    job.usuario = usuario
+    job.save()
+
+    return Response({
+        "detail": f"Archivo GLB reemplazado correctamente para job {job.id}",
+        "glb_path": job.glb_model.url
+    })
+
+
