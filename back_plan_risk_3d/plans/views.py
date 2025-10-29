@@ -235,8 +235,6 @@ def validar_plano(request):
     result = validate_plan(job_id, temp_json, temp_glb, temp_img)
     return Response(result)
 
-
-
 #reemplazar archivo glb de un job existente
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])

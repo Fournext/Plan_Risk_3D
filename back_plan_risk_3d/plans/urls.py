@@ -1,7 +1,6 @@
 # plans/urls.py
 from django.urls import path
-from .views import create_plan3d_job, create_plan_json, get_lista_modelos,generate_dynamic_glb, validar_plano
-from .views import create_plan3d_job, create_plan_json, get_lista_modelos,generate_dynamic_glb, reemplazar_glb
+from .views import create_plan3d_job, create_plan_json, get_lista_modelos,generate_dynamic_glb, validar_plano,reemplazar_glb
 
 urlpatterns = [
     path('plans/', create_plan3d_job, name='plans-create'),
