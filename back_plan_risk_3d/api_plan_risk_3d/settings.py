@@ -92,7 +92,7 @@ WSGI_APPLICATION = 'api_plan_risk_3d.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'plan_risk_db',      # nombre de tu base de datos
+        'NAME': 'plan_risk_db_sp2',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
         'PASSWORD': '071104',   # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
