@@ -22,13 +22,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-bdjk-$ar=3f&70-^+0htn$%e-96&qy!m+++()4owbg=9en!f27'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -43,6 +52,7 @@ INSTALLED_APPS = [
     'view_url_3D',
     'plans',
     'users',
+    'presupuesto',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +95,7 @@ DATABASES = {
         'NAME': 'plan_risk_db',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
         'PASSWORD': '6305913',   # la contraseña de ese usuario
+  # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
         'PORT': '5432',              # puerto por defecto de PostgreSQL
     }
@@ -93,6 +104,9 @@ DATABASES = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'users.auth.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
     ),
 }
 
@@ -147,5 +161,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
-
+CSRF_TRUSTED_ORIGINS = ['http://localhost:4200','http://127.0.0.1:4200']
+CSRF_COOKIE_SECURE = False
+CORS_ALLOW_CREDENTIALS = True
 # AUTH_USER_MODEL = 'view_url_3D.Usuario'

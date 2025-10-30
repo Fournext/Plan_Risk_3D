@@ -12,22 +12,32 @@ import { DecimalPipe, isPlatformBrowser } from '@angular/common';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Modelo3D } from '../../../../models/classes/model3D';
-import { environment } from '../../../../../environments/environment';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { BudgetForm } from "../../components/budget-form/budget-form";
+import { PricesForm } from "../../components/prices-form/prices-form";
+import { BudgetService } from '../../services/budget.service';
+import { BudgetResponse } from '../../../../models/interfaces/model3D/budget.interface';
 
 
 @Component({
   selector: 'app-editor-page',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, BudgetForm, PricesForm],
   templateUrl: './editor-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPageComponent {
+
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
+  private budgetService = inject(BudgetService);
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   // --- Estado UI adicional ---
   menuOpen = false;
+  //bandera para abrir el presupuesto
+  pricesForm = signal<boolean>(false);
+  budgetForm = signal<boolean>(false);
+
+
   year = new Date().getFullYear();
 
   // --- Three.js: Pivots de escena ---
@@ -67,9 +77,11 @@ export class EditorPageComponent {
     { name: 'Ladrillo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg' },
     { name: 'Piedra', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883265/plaster_brick_pattern_disp_1k_awiqtc.png' },
     { name: 'Cemento', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759883245/cracked_concrete_wall_disp_1k_sstfyd.png' },
-    { name: 'Madera 1', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894564/plywood_diff_1k_yle5d5.jpg' },
-    { name: 'Madera 2', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894554/wooden_gate_diff_1k_wjzhjf.jpg' },
-    { name: 'Medera 3', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894546/worn_planks_diff_1k_k9xbdg.jpg' },
+    { name: 'Madera tajibo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894564/plywood_diff_1k_yle5d5.jpg' },
+    { name: 'Madera ochoo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894554/wooden_gate_diff_1k_wjzhjf.jpg' },
+    { name: 'Madera roble', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759894546/worn_planks_diff_1k_k9xbdg.jpg' },
+    { name: 'Vidrio simple', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759888245/depositphotos_153541450-stock-photo-glass-texture-background_ueykra.webp' },
+    { name: 'Vidrio escandinavo', url: 'https://res.cloudinary.com/diqqfka6g/image/upload/v1761688251/Ice001_1K-JPG_Color_mcmksd.jpg' },
   ];
 
 
@@ -78,6 +90,8 @@ export class EditorPageComponent {
   selectedTexture = signal(this.textures[0].url);
 
   ngAfterViewInit(): void {
+    //aqui voy a tener que cargar los materiales guardados en el local storage
+
 
 
     // Ejecutar solo en cliente
@@ -494,11 +508,8 @@ export class EditorPageComponent {
     this.selectedDepth.set(newZ);
   }
 
-
-
-
-
-  onExportModel() {
+  onExportModel(dropdown: HTMLDetailsElement) {
+    dropdown.removeAttribute('open');
     if (this.modelo3D) {
       this.modelo3D.exportAsGLB('modelo_exportado.glb');
     } else {
@@ -506,16 +517,34 @@ export class EditorPageComponent {
     }
   }
 
-  onExportJSON() {
+  onGenerateBudget() {
+    //implementar el toast y un spinner mientras se genera el presupuesto
     if (!this.modelo3D) return;
-    const summary = this.modelo3D.toJSONSummary();
+    const summary = this.modelo3D.toJSONSummary();//--> aqui obtenemos el modelo en formato json
     const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'modelo_resumen.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = 'modelo_resumen.json';
+    // a.click();
+    // URL.revokeObjectURL(url);
+    this.budgetService.generateBudget(summary).subscribe({
+      next: (response: BudgetResponse) => {
+        console.log('Presupuesto generado con éxito:', response);
+        this.onShowBudget();
+      },
+      error: (error) => {
+        console.error('No se genero el presupuesto:', error);
+      }
+    });
+  }
+
+  public onUpdatePrices = () => {
+    this.pricesForm.set(!this.pricesForm());
+  }
+
+  public onShowBudget = () => {
+    this.budgetForm.set(!this.budgetForm());
   }
 
 

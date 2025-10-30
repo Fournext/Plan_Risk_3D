@@ -32,6 +32,8 @@
     "@angular/ssr": "^20.1.3",
     "@tailwindcss/postcss": "^4.1.12",
     "express": "^5.1.0",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.1.12",

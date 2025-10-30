@@ -22,16 +22,20 @@ export class RegisterPageComponent {
 
 
   private rol: string = 'usuario_normal';
-  private fecha_expiracion_plan: string = "00-00-0000";
-  private fecha_registro: string = new Date().toString();
+  // Fecha de expiración del plan (ninguna por defecto)
+  private fecha_expiracion_plan: string | null = null;
+
+  // Fecha de registro (hoy en formato ISO YYYY-MM-DD)
+  private fecha_registro: string| null =null;
 
   registerForm: FormGroup = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.minLength(5)]],
     email: ['', [Validators.email]],
-    password: ['', [Validators.minLength(8), Validators.required, Validators.maxLength(10)]],
+    password: ['', [Validators.minLength(4), Validators.required, Validators.maxLength(10)]],
     rol: [this.rol],
     fecha_expiracion_plan: [this.fecha_expiracion_plan],
-    fecha_registro: [new Date().toString()]
+    fecha_registro: [this.fecha_registro],
+    telefono: ['', [Validators.required, Validators.minLength(7), Validators.maxLength(15)]]
   });
 
   onSubmit(): void {
@@ -39,7 +43,7 @@ export class RegisterPageComponent {
       this.registerForm.markAllAsTouched();
       return;
     }
-    //aqui haremos la llamada al api
+    console.log(this.registerForm.value);
     this.authService.register(this.registerForm.value).subscribe({
       next: (response: any) => {
         console.log(response);

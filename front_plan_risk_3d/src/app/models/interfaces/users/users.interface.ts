@@ -3,8 +3,9 @@ export interface UserInterface {
   nombre: string,
   email: string,
   rol?: string,
-  fecha_expiracion_plan: string,
-  fecha_registro?: string
+  fecha_expiracion_plan?: string,
+  fecha_registro?: string,
+  telefono: string
 }
 export interface UserRegister {
   nombre: string,
@@ -12,7 +13,8 @@ export interface UserRegister {
   password?: string,
   rol: string,
   fecha_expiracion_plan?: string,
-  fecha_registro: string,
+  fecha_registro?: string,
+  telefono: string
 }
 
 export interface UserLogin {
@@ -31,8 +33,9 @@ export interface Usuario {
   email: string;
   password: string;
   rol: string;
-  fecha_expiracion_plan: string;
-  fecha_registro: string;
+  fecha_expiracion_plan?: string;
+  fecha_registro?: string;
+  telefono: string;
 }
 
 

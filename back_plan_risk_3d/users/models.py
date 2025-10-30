@@ -11,7 +11,8 @@ class Usuario(models.Model):
     password = models.CharField(max_length=255)
     rol = models.CharField(max_length=20, choices=ROLES, default='usuario_normal')
     fecha_expiracion_plan = models.DateField(null=True, blank=True)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
+    fecha_registro = models.DateTimeField(null=True, blank=True)
+    telefono = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.nombre} - {self.rol}"

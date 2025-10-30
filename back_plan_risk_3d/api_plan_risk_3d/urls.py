@@ -19,12 +19,18 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def home(request):
+    return JsonResponse({"message": "API Plan Risk 3D activa..... Bienvenido!"})
 
 urlpatterns = [
     # path('admin/', admin.site.urls),
+    path('', home),
     path('api/view_model/', include('view_url_3D.urls')),
     path('api/set_plan/', include('plans.urls')),
     path('api/users/', include('users.urls')),
+    path('api/presupuesto/', include('presupuesto.urls')),
 ]
 
 # Servir archivos media en desarrollo

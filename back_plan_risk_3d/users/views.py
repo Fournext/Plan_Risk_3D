@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.conf import settings
 import os
 from rest_framework.decorators import action
+
 from rest_framework.response import Response
 from rest_framework import status, viewsets, generics, status
 
@@ -63,6 +64,15 @@ class RegistroView(generics.CreateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            usuario = serializer.save()
+            return Response(UsuarioSerializer(usuario).data, status=status.HTTP_201_CREATED)
+        print("❌ ERRORES DE SERIALIZER:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class LoginView(APIView):

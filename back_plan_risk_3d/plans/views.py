@@ -120,6 +120,42 @@ def create_plan_json(request):
 
     return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
 
+@api_view(['POST'])
+def generate_dynamic_glb(request):
+    """
+    Endpoint que recibe el JSON de detecciones y colores dinámicos desde el frontend
+    y devuelve el modelo GLB generado sin almacenar texturas en el backend.
+    """
+    try:
+        det_json = request.data.get("det_json")
+        colors = request.data.get("colors")
+        usuario_id = request.data.get("usuario")
+
+        # Convertir cadenas JSON si vienen como texto
+        if isinstance(det_json, str):
+            det_json = json.loads(det_json)
+        if isinstance(colors, str):
+            colors = json.loads(colors)
+
+        # Crear un nuevo job temporal (sin archivo)
+        job = Plan3DJob.objects.create(usuario_id=usuario_id)
+
+        # Generar el GLB con colores personalizados
+        process_and_save_glb(job, det_json, colors=colors)
+
+        return Response(
+            {
+                "message": "Modelo GLB generado exitosamente con colores personalizados.",
+                "job_id": job.id,
+                "glb_path": job.glb_model.url if job.glb_model else None
+            },
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 #obtener la lista de modelos generados por el usuiario require token xd
 @api_view(['GET'])
 @parser_classes([MultiPartParser, FormParser])
