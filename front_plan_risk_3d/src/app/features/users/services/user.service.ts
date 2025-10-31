@@ -19,7 +19,8 @@ export class UserService {
     rol: '',
     fecha_expiracion_plan: '',
     fecha_registro: '',
-    telefono: ''
+    telefono: '',
+    url: ''
   });
 
   getUser(id: number): Observable<any> {
@@ -32,7 +33,8 @@ export class UserService {
           rol: usuario.rol,
           fecha_expiracion_plan: usuario.fecha_expiracion_plan,
           fecha_registro: usuario.fecha_registro,
-          telefono: usuario.telefono
+          telefono: usuario.telefono,
+          url: usuario.url
         }
         this.usuario.set(currentUser);
         console.log(usuario);
@@ -48,7 +50,8 @@ export class UserService {
           rol: usuario.rol,
           fecha_expiracion_plan: usuario.fecha_expiracion_plan,
           fecha_registro: usuario.fecha_registro,
-          telefono: usuario.telefono
+          telefono: usuario.telefono,
+          url: usuario.url
         }
         this.usuario.set(currentUser);
       })

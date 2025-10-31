@@ -95,7 +95,7 @@ DATABASES = {
         'NAME': 'plan_risk_db',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
         'PASSWORD': '6305913',   # la contraseña de ese usuario
-  # la contraseña de ese usuario
+        # 'PASSWORD': '14776280',   # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
         'PORT': '5432',              # puerto por defecto de PostgreSQL
     }

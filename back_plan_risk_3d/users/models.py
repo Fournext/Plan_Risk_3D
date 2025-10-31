@@ -13,6 +13,7 @@ class Usuario(models.Model):
     fecha_expiracion_plan = models.DateField(null=True, blank=True)
     fecha_registro = models.DateTimeField(null=True, blank=True)
     telefono = models.IntegerField(null=True, blank=True)
+    url = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"{self.nombre} - {self.rol}"

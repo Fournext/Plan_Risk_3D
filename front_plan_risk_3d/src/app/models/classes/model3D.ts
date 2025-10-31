@@ -330,45 +330,40 @@ export class Modelo3D {
     });
   }
 
-  exportAsGLB(filename = 'modelo.glb') {
-    if (!this.objeto) {
-      console.warn('⚠️ No hay modelo cargado para exportar.');
-      return;
-    }
+  exportAsGLB(filename = 'modelo.glb'): Promise<{ blob: Blob, filename: string }> {
+  return new Promise((resolve, reject) => {
+    if (!this.objeto) return reject('No hay modelo cargado');
 
     const exporter = new GLTFExporter();
-
     exporter.parse(
       this.objeto,
       (result) => {
-        // Si es binario (GLB)
-        if (result instanceof ArrayBuffer) {
-          const blob = new Blob([result], { type: 'model/gltf-binary' });
-          this.downloadBlob(blob, filename);
-        } else {
-          // Si es JSON (.gltf)
-          const json = JSON.stringify(result, null, 2);
-          const blob = new Blob([json], { type: 'application/json' });
-          this.downloadBlob(blob, filename.replace('.glb', '.gltf'));
-        }
+        const blob =
+          result instanceof ArrayBuffer
+            ? new Blob([result], { type: 'model/gltf-binary' })
+            : new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+
+        // ✅ Ahora sí el nombre queda emparejado al resultado
+        resolve({ blob, filename });
       },
-      (error) => {
-        console.error('❌ Error exportando modelo:', error);
-      },
-      { binary: true } // 🔸 cambia a false si quieres GLTF JSON
+      (err) => reject(err),
+      { binary: true }
     );
-  }
+  });
+}
+
 
   /**
-     * 🔽 Descarga el archivo generado en el navegador
-     */
-  private downloadBlob(blob: Blob, filename: string) {
+   * 🔽 Descarga un blob usando el nombre proporcionado
+   */
+   downloadBlob(blob: Blob, filename: string) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
   }
+
 
   toJSONSummary() {
     const findMaterialName = (mat?: THREE.Material) => {

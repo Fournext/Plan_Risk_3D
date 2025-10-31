@@ -244,7 +244,7 @@ button.toast-close-button {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.1s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 .animate-fade-in-up {

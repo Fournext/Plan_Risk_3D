@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password, make_password
 from rest_framework.views import APIView
 from .auth import JWTAuthentication
+from rest_framework.decorators import api_view, parser_classes
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -119,3 +120,17 @@ def generar_tokens(usuario):
         "refresh": str(refresh),
         "access": str(access)
     }
+
+@api_view(['PUT'])
+def update_usuario(request, pk):
+    try:
+        usuario = Usuario.objects.get(pk=pk)
+    except Usuario.DoesNotExist:
+        return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

@@ -17,6 +17,7 @@ import { BudgetForm } from "../../components/budget-form/budget-form";
 import { PricesForm } from "../../components/prices-form/prices-form";
 import { BudgetService } from '../../services/budget.service';
 import { BudgetResponse } from '../../../../models/interfaces/model3D/budget.interface';
+import { ModelsService } from '../../services/models.service';
 
 
 @Component({
@@ -30,6 +31,7 @@ export class EditorPageComponent {
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
   private budgetService = inject(BudgetService);
+  private modelService = inject(ModelsService);
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   // --- Estado UI adicional ---
   menuOpen = false;
@@ -508,13 +510,45 @@ export class EditorPageComponent {
     this.selectedDepth.set(newZ);
   }
 
-  onExportModel(dropdown: HTMLDetailsElement) {
+  async onExportModel(dropdown: HTMLDetailsElement) {
+    //obtenemos el modelo del local storage para obtener su id
+    const model = JSON.parse(localStorage.getItem('modelo') || '{}');
+
     dropdown.removeAttribute('open');
     if (this.modelo3D) {
-      this.modelo3D.exportAsGLB('modelo_exportado.glb');
+      const model3D: { blob: Blob; filename: string } = await this.modelo3D.exportAsGLB(`job_${model.id}.glb`);
+      this.modelo3D.downloadBlob(model3D.blob, model3D.filename);
     } else {
       console.warn('⚠️ No hay modelo cargado');
     }
+  }
+
+  async onSaveModel(dropdown: HTMLDetailsElement) {
+    dropdown.removeAttribute('open');
+    //verificamos la existencia del modelo
+    if (this.modelo3D) {
+      const model = JSON.parse(localStorage.getItem('modelo') || '{}');
+      const model3D: { blob: Blob; filename: string } = await this.modelo3D.exportAsGLB(`job_${model.id}.glb`);
+      //ahora vamos a actualizar el modelo en el backend
+      this.modelService.updateModel(new File([model3D.blob], model3D.filename), model.usuario).subscribe({
+        next: (models) => {
+          console.log('✅ Modelos actualizados:', models);
+          // 🔹 Actualizar el modelo actual en localStorage
+          const updated = models.find((m: any) => m.id === model.id);
+          if (updated) {
+            localStorage.setItem('modelo', JSON.stringify(updated));
+          }
+        },
+        error: (error) => {
+          console.error('Error al actualizar el modelo:', error);
+        }
+      });
+
+    } else {
+      console.warn('⚠️ No hay modelo cargado');
+    }
+
+
   }
 
   onGenerateBudget() {

@@ -1,20 +1,24 @@
-<section class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white  rounded-[10px]">
+<section class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white  rounded-[10px] animate-fade-in">
   <!-- Contenido principal -->
   <main class="flex-1 p-6">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (item of listModels(); track item.id;let i=$index) {
       <div
-        class="h-32 rounded-md bg-cover bg-center bg-[url(assets/imagen-defecto.jpg)] flex justify-center items-center gap-2 text-black font-bold shadow-xl/30 hover:scale-[1.02]">
+        class="h-32 rounded-md bg-cover bg-center flex justify-center items-center gap-2 text-black font-bold shadow-xl/30 hover:scale-[1.02]"
+        [style.background-image]="'url(http://localhost:8000' + item.plan_file + ')'">
         <span>
           Modelo: {{i+1}}
         </span>
-        <button class="bg-green-500 hover:scale-[1.05] text-white px-2 py-1 rounded-[10px]"
+        <button class="bg-green-500 hover:bg-green-700 text-white px-2 py-1 rounded-[10px]"
           (click)="openModel(item)">Abrir</button>
       </div>
       }
-      <div class="h-32 rounded-md bg-[#1B3C53] flex items-center justify-center font-bold text-white flex-col shadow-xl/30 hover:scale-[1.02]">
-        <label for="file" class="border p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:inset-shadow-sm hover:inset-shadow-white">Seleccionar archivo</label>
-        <input type="file" (change)="onFileSelected($event)" id="file" class="hidden" >
+      <div
+        class="h-32 rounded-md bg-[#1B3C53] flex items-center justify-center font-bold text-white flex-col shadow-xl/30 hover:scale-[1.02]">
+        <label for="file"
+          class="border p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:inset-shadow-sm hover:inset-shadow-white">Seleccionar
+          archivo</label>
+        <input type="file" (change)="onFileSelected($event)" id="file" class="hidden">
       </div>
     </div>
   </main>

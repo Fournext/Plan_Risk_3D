@@ -11,7 +11,7 @@ export class TokenInterceptor implements HttpInterceptor {
     const token = this.ts.getAccessToken();
 
     // 👇 Endpoints que deben excluirse del header Authorization
-    const excludedUrls = ['/auth/login', '/auth/register'];
+    const excludedUrls = ['/auth/login', '/auth/register','cloudinary.com'];
 
     // Si la URL contiene alguno de los endpoints excluidos → no añadir token
     if (excludedUrls.some(url => req.url.includes(url))) {
