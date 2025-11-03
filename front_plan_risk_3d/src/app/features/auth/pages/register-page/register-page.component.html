@@ -1,4 +1,4 @@
-<div class="h-full w-full flex flex-col">
+<div class="h-full w-full flex flex-col animate-fade-in">
   <!-- Sección con fondo y altura calculada -->
   <section class="relative flex-1 bg-cover bg-center bg-[url(assets/casa.png)] overflow-hidden"
     style="min-height: calc(100svh - 8rem);">
@@ -34,6 +34,12 @@
         <div class="mb-6">
           <label class="mb-1 block text-sm font-semibold text-slate-100" for="name">Nombre completo</label>
           <input formControlName="nombre" type="text" id="name"
+            class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60 outline-none ring-0 transition focus:border-transparent focus:ring-2 focus:ring-sky-400"
+            placeholder="••••••••" />
+        </div>
+        <div class="mb-6">
+          <label class="mb-1 block text-sm font-semibold text-slate-100" for="telefono">Telefono</label>
+          <input formControlName="telefono" type="text" id="telefono"
             class="w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60 outline-none ring-0 transition focus:border-transparent focus:ring-2 focus:ring-sky-400"
             placeholder="••••••••" />
         </div>

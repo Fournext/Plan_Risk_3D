@@ -1,0 +1,51 @@
+<!-- OVERLAY -->
+<div
+  class="fixed inset-0 z-50 flex justify-center items-center bg-black/60 backdrop-blur-sm animate-fade-in transition-opacity duration-300">
+
+  <!-- MODAL -->
+  <div
+    class="relative flex flex-col md:flex-row bg-white rounded-2xl shadow-2xl w-[95%] max-w-3xl overflow-hidden animate-fade-in-up">
+
+    <!-- BOTÓN CERRAR -->
+    <button (click)="cerrarModal()"
+      class="absolute top-4 left-4 text-gray-500 hover:text-gray-700 text-2xl font-bold transition-transform hover:scale-110">
+      ✖
+    </button>
+
+    <!-- PANEL IZQUIERDO -->
+    <section class="flex-1 p-6 bg-gray-50 border-r border-gray-200 flex flex-col">
+      <h2 class="text-2xl font-semibold mb-5 text-gray-800 text-center">
+        Actualizar precios de materiales
+      </h2>
+
+      <form [formGroup]="materialsForm" (ngSubmit)="guardarCambios()"
+        class="flex-1 grid gap-3 overflow-y-auto pr-2 custom-scrollbar">
+
+        @for (mat of materialService.materiales(); track mat.nombre) {
+        <div
+          class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-transform hover:scale-[1.01]">
+          <label class="font-medium text-gray-700 flex-1 truncate">
+            {{ mat.nombre }}
+            <span class="text-sm text-gray-500">({{ mat.unidad }})</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <input type="number" formControlName="{{ mat.nombre }}" placeholder="Precio"
+              class="border rounded-md px-2 py-1 w-24 text-right focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-150"
+              [class.border-red-500]="isValidField(mat.nombre)">
+            <button type="button" (click)="actualizarMaterial(mat.nombre)"
+              class="bg-[#1B3C53] text-white px-3 py-1 rounded-md hover:bg-[#164464] active:scale-95 transition">
+              💾
+            </button>
+          </div>
+        </div>
+        }
+
+        <button type="submit"
+          class="mt-5 bg-green-600 text-white px-5 py-2 rounded-md hover:bg-green-500 active:scale-95 font-semibold shadow-md transition w-[50%] mx-auto">
+          Guardar cambios
+        </button>
+      </form>
+    </section>
+  </div>
+</div>

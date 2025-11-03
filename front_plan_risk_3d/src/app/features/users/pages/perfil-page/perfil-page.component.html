@@ -1,4 +1,4 @@
-<main class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] p-6">
+<main class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] p-6 animate-fade-in">
   <article class="max-w-[1000px] w-full mx-auto bg-[#ffffff43] text-gray-800 rounded-xl shadow p-6
                   grid gap-6 grid-rows-[auto_1fr_auto]">
     <!-- HEADER -->
@@ -12,12 +12,16 @@
     <!-- CONTENIDO: AVATAR + FORM -->
     <div class="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
       <!-- AVATAR -->
-      <figure class="justify-self-center md:justify-self-start">
-        <img src="https://i.pinimg.com/originals/40/11/b5/4011b5ab5f2376f26a5d46ff904fc5e2.jpg"
+      <figure class="justify-self-center md:justify-self-start relative">
+        <img src="{{currentUser().url}}"
           alt="Avatar de Juan Pérez" class="w-32 h-32 rounded-full object-cover border-2 border-gray-200" />
         <figcaption class="sr-only">Avatar
           de Juan Pérez</figcaption>
+        <label for="perfil"
+          class="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 hover:scale-[1.01]">+</label>
+        <input type="file" id="perfil" (change)="onUpdloadImage($event)" class="hidden">
       </figure>
+
 
       <!-- FORMULARIO DE CAMPOS -->
       <form [formGroup]="informationForm" (submit)="onSubmit()" class="grid gap-4

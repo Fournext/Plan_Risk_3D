@@ -235,7 +235,6 @@ def validar_plano(request):
     result = validate_plan(job_id, temp_json, temp_glb, temp_img)
     return Response(result)
 
-#reemplazar archivo glb de un job existente
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def reemplazar_glb(request):
@@ -248,39 +247,38 @@ def reemplazar_glb(request):
     new_glb = request.FILES.get('file_glb')
     usuario_id = request.data.get('usuario')
 
+    # 🔹 Validar usuario
     try:
         usuario = Usuario.objects.get(id=usuario_id)
     except Usuario.DoesNotExist:
         return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
-    
+
     if not new_glb:
         return Response({"detail": "No se envió archivo .glb"}, status=status.HTTP_400_BAD_REQUEST)
-    # Extraer el ID del nombre del archivo (ejemplo: job_2.glb → 2)
-    import re
+
+    import re, time
     match = re.search(r'job_(\d+)\.glb$', new_glb.name)
     if not match:
         return Response({"detail": "Nombre de archivo no válido (debe ser job_<id>.glb)"}, status=status.HTTP_400_BAD_REQUEST)
-    
+
     job_id = int(match.group(1))
 
-    # Buscar el job
     try:
         job = Plan3DJob.objects.get(id=job_id)
     except Plan3DJob.DoesNotExist:
         return Response({"detail": f"No existe Plan3DJob con id {job_id}"}, status=status.HTTP_404_NOT_FOUND)
 
-
-    # Reemplazar el archivo
+    # 🔸 Reemplazar archivo GLB existente con nombre único (para evitar cache)
     if job.glb_model:
         job.glb_model.delete(save=False)
 
-    job.glb_model.save(new_glb.name, new_glb, save=True)
+    timestamp = int(time.time())
+    new_name = f"job_{job.id}_{timestamp}.glb"
+    job.glb_model.save(new_name, new_glb, save=False)
+
     job.usuario = usuario
-    job.save()
+    job.save(update_fields=['glb_model', 'usuario'])
 
-    return Response({
-        "detail": f"Archivo GLB reemplazado correctamente para job {job.id}",
-        "glb_path": job.glb_model.url
-    })
-
-
+    # ✅ Devolver modelo completo actualizado
+    serializer = Plan3DJobSerializer(job)
+    return Response(serializer.data, status=status.HTTP_200_OK)

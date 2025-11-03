@@ -10,10 +10,11 @@
          bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white
          transition-[width,opacity] duration-300 ease-in-out">
     <!-- Foto -->
-    <div
-      class="w-full h-30 bg-gray-300 rounded flex items-center justify-center text-xs text-black border border-[#06273d] mt-5">
-      FOTO
+    <div class="w-full h-32 bg-gray-300 rounded flex items-center justify-center text-xs text-black border border-[#06273d] mt-5
+         bg-cover bg-center bg-no-repeat" [style.background-image]="'url(' + currentUser().url + ')'">
     </div>
+
+
 
     <!-- Navegación -->
     <nav class="flex flex-col gap-4 flex-1 justify-start pt-4 ">

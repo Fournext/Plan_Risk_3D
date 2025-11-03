@@ -78,9 +78,9 @@ export class HomePageComponent {
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(1, 1, 1),
       new THREE.Euler(0, 0, 0),
-      () => {
-        console.log('Modelo cargado');
-      }
+      [
+        { name: 'cartoon_cyberpunk_building', url }
+      ]
     );
 
     // 6) Loop de animación

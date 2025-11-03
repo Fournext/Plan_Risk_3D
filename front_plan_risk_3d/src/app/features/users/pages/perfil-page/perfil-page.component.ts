@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { UserService } from '../../services/user.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TokenStorageService } from '../../../auth/services/tokenStorage.service';
 import { isPlatformBrowser } from '@angular/common';
 import { UserRegister } from '../../../../models/interfaces/users/users.interface';
 import { nextTick } from 'process';
+import { CloudinaryService } from '../../services/cloudinary.service';
+import { Toast, ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-perfil-page',
@@ -17,6 +19,12 @@ export class PerfilPageComponent implements OnInit {
   private tokenStorageService = inject(TokenStorageService);
   private formBuilder = inject(FormBuilder);
   private platformId = inject(PLATFORM_ID);
+  private cloudinaryService = inject(CloudinaryService);
+  private toastr = inject(ToastrService);
+
+  //usuario actual como computed
+  currentUser = computed(() => this.userService.usuario());
+
 
   isReadOnly: boolean = true;
 
@@ -65,6 +73,36 @@ export class PerfilPageComponent implements OnInit {
     });
   }
 
+  onUpdloadImage(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const currentUser = this.tokenStorageService.getUser();
+    if (input.files && input.files.length > 0 && currentUser) {
+      const file = input.files[0];
+      this.cloudinaryService.uploadImage(file).subscribe({
+        next: (response) => {
+          this.toastr.success('Imagen subida con éxito', 'Éxito', { timeOut: 3000 });
+          console.log('Imagen subida:', response);
+          //actualizaremos al usuario con la nueva url
+          this.userService.editUser(currentUser.id, { url: response.secure_url } as UserRegister).subscribe({
+            next: (res) => {
+              console.log('Usuario actualizado con nueva imagen:', res);
+              // Aquí puedes actualizar el estado del componente si es necesario
+            },
+            error: (error) => {
+              this.toastr.error('Error al actualizar el usuario', error.message, { timeOut: 3000 });
+            }
+          });
+        },
+        error: (error) => {
+          this.toastr.error('Error al subir la imagen', error.message, { timeOut: 3000 });
+        }
+      });
+    }
+
+    input.value = '';
+
+  }
+
 
   ngOnInit(): void {
     if (!this.isBrowser) return;
@@ -79,7 +117,8 @@ export class PerfilPageComponent implements OnInit {
         plan: usuario.rol,
         fechaExpiracion: usuario.fecha_expiracion_plan?.split('T')[0] ?? '',
         fechaRegistro: usuario.fecha_registro?.split('T')[0] ?? ''
-      });
+      })
+        ;
     });
   }
 

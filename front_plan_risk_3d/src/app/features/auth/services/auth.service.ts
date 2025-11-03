@@ -29,7 +29,9 @@ export class AuthService {
           email: resultado.usuario.email,
           rol: resultado.usuario.rol,
           fecha_expiracion_plan: resultado.fecha_expiracion_plan,
-          fecha_registro: resultado.fecha_registro
+          fecha_registro: resultado.fecha_registro,
+          telefono: resultado.usuario.telefono,
+          url: resultado.usuario.url
         }
         this.tokenStorage.saveAccessToken(resultado.access);
         this.tokenStorage.saveRefreshToken(resultado.refresh);
@@ -44,8 +46,10 @@ export class AuthService {
       email: user.email,
       password: user.password,
       rol: user.rol,
-      fecha_expiracion_plan: user.fecha_expiracion_plan,
-      fecha_registro: user.fecha_registro,
+      fecha_expiracion_plan: null,
+      fecha_registro: null,
+      telefono: user.telefono,
+      url: user.url
     }).pipe(
       tap((result) => {
         console.log(result);

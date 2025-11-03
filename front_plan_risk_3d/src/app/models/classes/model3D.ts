@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ModelJson } from '../interfaces/model3D/model3D.interface';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+
 
 
 
@@ -8,6 +10,10 @@ export class Modelo3D {
   public objeto!: THREE.Object3D;
   private onLoadCallbackList: Array<() => void> = [];
   private loader = new THREE.TextureLoader();
+  private walls: THREE.Mesh[] = [];
+  private doors: THREE.Mesh[] = [];
+  private windows: THREE.Mesh[] = [];
+
 
   constructor(
     private scene: THREE.Scene,
@@ -15,6 +21,7 @@ export class Modelo3D {
     public position = new THREE.Vector3(0, 0, 0),
     public scale = new THREE.Vector3(1, 1, 1),
     public rotation = new THREE.Euler(0, 0, 0),
+    private textures: { name: string; url: string }[] = [], // ✅ nuevo
     onLoadCallback?: () => void
   ) {
     if (onLoadCallback) this.onLoadCallbackList.push(onLoadCallback);
@@ -76,20 +83,28 @@ export class Modelo3D {
       loader.load(this.url, (gltf) => {
         this.objeto = gltf.scene;
 
-        // 🔸 1. Eliminar materiales y texturas del modelo original
         this.objeto.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
 
-            // ✅ Reemplazamos cualquier material embebido
             mesh.material = new THREE.MeshStandardMaterial({
-              color: 0x888888,         // gris neutro inicial
+              color: 0x888888,
               metalness: 0.2,
               roughness: 0.8,
               side: THREE.DoubleSide,
             });
+
+            mesh.name = child.name || `mesh_${THREE.MathUtils.generateUUID()}`;
+
+            // 🧱 Clasificar por tipo (nombre parcial o palabra clave)
+            const lname = mesh.name.toLowerCase();
+            if (lname.includes('wall_internal')) this.walls.push(mesh);
+            else if (lname.includes('door')) this.doors.push(mesh);
+            else if (lname.includes('window')) this.windows.push(mesh);
           }
         });
+
+
 
         // 🔸 2. Centrar, escalar y posicionar como ya hacías
         this.objeto.scale.copy(this.scale);
@@ -107,7 +122,7 @@ export class Modelo3D {
         this.scene.add(this.objeto);
 
         // 🔸 4. Aplicar textura base si querés (opcional)
-        this.setTextureByName('wall', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg');
+        this.setTextureByName('wall_internal', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1757453080/ladrillo_e3xocf.jpg');
         this.setTextureByName('door', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759888108/rosewood_veneer1_diff_1k_utjn4v.jpg');
         this.setTextureByName('window', 'https://res.cloudinary.com/diqqfka6g/image/upload/v1759888245/depositphotos_153541450-stock-photo-glass-texture-background_ueykra.webp');
         this.onLoadCallbackList.forEach(cb => cb());
@@ -144,25 +159,6 @@ export class Modelo3D {
     });
   }
 
-  // // ✅ Cambiar solo la textura del material
-  // setTexture(texture: THREE.Texture) {
-  //   this.objeto.traverse((child) => {
-  //     if ((child as THREE.Mesh).isMesh) {
-  //       const mesh = child as THREE.Mesh;
-
-  //       const materiales = Array.isArray(mesh.material)
-  //         ? mesh.material
-  //         : [mesh.material];
-
-  //       materiales.forEach((mat) => {
-  //         if ((mat as THREE.MeshStandardMaterial).map !== undefined) {
-  //           (mat as THREE.MeshStandardMaterial).map = texture;
-  //           (mat as THREE.MeshStandardMaterial).needsUpdate = true;
-  //         }
-  //       });
-  //     }
-  //   });
-  // }
 
   // ✅ Añadir más callbacks después de haber instanciado
   addOnLoadCallback(callback: () => void) {
@@ -173,6 +169,10 @@ export class Modelo3D {
   getObject3D(): THREE.Object3D {
     return this.objeto;
   }
+  getWalls(): THREE.Mesh[] { return this.walls; }
+  getDoors(): THREE.Mesh[] { return this.doors; }
+  getWindows(): THREE.Mesh[] { return this.windows; }
+
 
   private buildFromDetections(model: ModelJson) {
     const scale = 0.01; // Escalar píxeles → unidades Three.js
@@ -221,7 +221,7 @@ export class Modelo3D {
 
     const texture = this.loader.load(url, (tex) => {
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(10, 4); // 🔸 ajustá la escala visual de la textura
+      tex.repeat.set(4, 4); // 🔸 ajustá la escala visual de la textura
       tex.colorSpace = THREE.SRGBColorSpace;
     });
 
@@ -272,65 +272,154 @@ export class Modelo3D {
     if (!this.objeto) return;
 
     const lowerName = partialName.toLowerCase();
+    const textureName = this.textures.find(t => t.url === url)?.name ?? 'Personalizado';
 
-    const texture = this.loader.load(url, (tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-
-      // 🔸 Repetición según tipo
-      if (lowerName.includes('window')) {
-        tex.repeat.set(1, 1); // solo una vez
-      } else if (lowerName.includes('door')) {
-        tex.repeat.set(2, 2);
-      } else {
-        tex.repeat.set(10, 4); // muros por defecto
-      }
-
-      tex.colorSpace = THREE.SRGBColorSpace;
-    });
+    const texture = this.loader.load(url);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
 
     this.objeto.traverse((child) => {
-      if (
-        (child as THREE.Mesh).isMesh &&
-        child.name.toLowerCase().includes(lowerName)
-      ) {
-        const mesh = child as THREE.Mesh;
-        const geom = mesh.geometry as THREE.BufferGeometry;
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const lname = mesh.name.toLowerCase();
 
-        // 🧩 Generar UVs si no existen
-        if (!geom.attributes['uv']) {
-          geom.computeBoundingBox();
-          const bbox = geom.boundingBox!;
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const pos = geom.attributes['position'] as THREE.BufferAttribute;
+      const isWall = lowerName === 'wall_internal' && lname.startsWith('wall_internal');
+      const isDoor = lowerName === 'door' && lname.includes('door');
+      const isWindow = lowerName === 'window' && lname.includes('window');
+      if (!isWall && !isDoor && !isWindow) return;
 
-          const uvArray: number[] = [];
-          for (let i = 0; i < pos.count; i++) {
-            const x = (pos.getX(i) - bbox.min.x) / size.x;
-            const z = (pos.getZ(i) - bbox.min.z) / size.z;
-            uvArray.push(x, z);
-          }
-          geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvArray, 2));
+      // Configura repetición
+      if (isWindow) texture.repeat.set(1, 1);
+      else if (isDoor) texture.repeat.set(2, 2);
+      else texture.repeat.set(2, 2);
+
+      // Asegura UVs
+      const geom = mesh.geometry as THREE.BufferGeometry;
+      if (!geom.attributes['uv']) {
+        geom.computeBoundingBox();
+        const bbox = geom.boundingBox!;
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        const pos = geom.attributes['position'] as THREE.BufferAttribute;
+
+        const uvArray: number[] = [];
+        for (let i = 0; i < pos.count; i++) {
+          const x = (pos.getX(i) - bbox.min.x) / size.x;
+          const z = (pos.getZ(i) - bbox.min.z) / size.z;
+          uvArray.push(x, z);
         }
-
-        // 🎨 Material
-        const newMat = new THREE.MeshStandardMaterial({
-          map: texture,
-          color: 0xffffff,
-          metalness: 0.1,
-          roughness: 0.9,
-          side: THREE.DoubleSide,
-          transparent: lowerName.includes('window'),
-          opacity: lowerName.includes('window') ? 0.9 : 1.0,
-        });
-
-        mesh.material = newMat;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvArray, 2));
       }
+
+      // 🎨 Crea material y guarda metadato del nombre
+      const newMat = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: 0xffffff,
+        metalness: 0.1,
+        roughness: 0.9,
+        side: THREE.DoubleSide,
+        transparent: isWindow,
+        opacity: isWindow ? 0.9 : 1.0,
+      });
+
+      (newMat as any)._textureName = textureName; // ✅ guarda el nombre explícitamente
+
+      mesh.material = newMat;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
     });
   }
 
+  exportAsGLB(filename = 'modelo.glb'): Promise<{ blob: Blob, filename: string }> {
+  return new Promise((resolve, reject) => {
+    if (!this.objeto) return reject('No hay modelo cargado');
+
+    const exporter = new GLTFExporter();
+    exporter.parse(
+      this.objeto,
+      (result) => {
+        const blob =
+          result instanceof ArrayBuffer
+            ? new Blob([result], { type: 'model/gltf-binary' })
+            : new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+
+        // ✅ Ahora sí el nombre queda emparejado al resultado
+        resolve({ blob, filename });
+      },
+      (err) => reject(err),
+      { binary: true }
+    );
+  });
+}
+
+
+  /**
+   * 🔽 Descarga un blob usando el nombre proporcionado
+   */
+   downloadBlob(blob: Blob, filename: string) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+
+  toJSONSummary() {
+    const findMaterialName = (mat?: THREE.Material) => {
+      if (!mat) return 'Sin textura';
+      const m = mat as any;
+      if (m._textureName) return m._textureName; // ✅ leer etiqueta guardada
+      if (m.map?.image?.src) {
+        const url = m.map.image.src.toLowerCase();
+        const tex = this.textures.find(t => url.includes(t.url.toLowerCase()));
+        if (tex) return tex.name;
+      }
+      return 'Personalizado';
+    };
+
+
+
+    const extractData = (mesh: THREE.Mesh, type: string) => {
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+
+      const material = mesh.material as THREE.MeshStandardMaterial;
+      const materialName = findMaterialName(material);
+
+
+      return {
+        type,
+        name: mesh.name,
+        width: size.x,
+        height: size.y,
+        depth: size.z,
+        position: {
+          x: mesh.position.x,
+          y: mesh.position.y,
+          z: mesh.position.z,
+        },
+        material: {
+          name: materialName,
+          color: material.color?.getHexString?.(),
+        },
+      };
+    };
+
+    return {
+      counts: {
+        walls: this.walls.length,
+        doors: this.doors.length,
+        windows: this.windows.length,
+      },
+      objects: [
+        ...this.walls.map((m) => extractData(m, 'wall')),
+        ...this.doors.map((m) => extractData(m, 'door')),
+        ...this.windows.map((m) => extractData(m, 'window')),
+      ],
+    };
+  }
 
 
 

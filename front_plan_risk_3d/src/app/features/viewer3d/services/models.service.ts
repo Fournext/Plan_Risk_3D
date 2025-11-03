@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { Model3D } from '../../../models/interfaces/model3D/model3D.interface';
-import { Observable, tap } from 'rxjs';
+import { Observable, switchMap, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -25,10 +25,24 @@ export class ModelsService {
     const formData = new FormData();
     formData.append('plan_file', file);
     formData.append('usuario', usuario.toString());
-    return this.http.post<Model3D>(`${this.API}api/set_plan/plans/`, formData ).pipe(
+    return this.http.post<Model3D>(`${this.API}api/set_plan/plans/`, formData).pipe(
       tap(() => this.getModels().subscribe())
     )
   }
+
+
+
+  updateModel(file: File, usuario: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('file_glb', file);
+    formData.append('usuario', usuario.toString());
+
+    return this.http.post<any>(`${this.API}api/set_plan/reemplazar_glb/`, formData).pipe(
+      switchMap(() => this.getModels()) // 👈 Espera a que getModels() termine
+    );
+  }
+
+
 
   constructor() { }
 
