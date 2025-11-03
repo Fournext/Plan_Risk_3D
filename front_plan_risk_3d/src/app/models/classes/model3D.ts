@@ -422,6 +422,77 @@ export class Modelo3D {
   }
 
 
+createElement(
+  type: 'wall' | 'door' | 'window',
+  width = 1,
+  height = 3,
+  depth = 0.4,
+  position?: THREE.Vector3
+) {
+  // 1️⃣ Buscar referencia de material según tipo
+  let refArray: THREE.Mesh[] = [];
+  if (type === 'wall') refArray = this.walls;
+  else if (type === 'door') refArray = this.doors;
+  else if (type === 'window') refArray = this.windows;
+
+  // 2️⃣ Determinar material base
+  let baseMaterial: THREE.MeshStandardMaterial;
+  if (refArray.length > 0) {
+    baseMaterial = (refArray[0].material as THREE.MeshStandardMaterial).clone();
+  } else {
+    let color = 0xaaaaaa;
+    if (type === 'wall') color = 0x444444;
+    if (type === 'door') color = 0x00ff00;
+    if (type === 'window') color = 0x0000ff;
+
+    baseMaterial = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.8,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+    });
+  }
+
+  // 3️⃣ Calcular altura base (nivel del suelo)
+  let baseY = 0;
+  if (this.walls.length > 0) {
+    const ref = this.walls[0];
+    const box = new THREE.Box3().setFromObject(ref);
+    baseY = box.min.y;
+  }
+
+  // 4️⃣ Posición del nuevo elemento (sin modificar luego)
+  const pos = position ?? new THREE.Vector3(0, 0, 0);
+  pos.y = baseY; // base real del suelo
+
+  // 5️⃣ Crear geometría con pivot en la base (crece solo hacia arriba)
+  const geometry = new THREE.BoxGeometry(width, height, depth);
+
+  // 👇 Fijamos el pivot abajo (para eje Y como altura)
+  geometry.translate(0, height / 2, 0);
+
+  const mesh = new THREE.Mesh(geometry, baseMaterial);
+  mesh.name = `${type}_${Date.now()}`;
+  mesh.position.copy(pos);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  // 6️⃣ Añadir al grupo y clasificar
+  this.objeto.add(mesh);
+  if (type === 'wall') this.walls.push(mesh);
+  if (type === 'door') this.doors.push(mesh);
+  if (type === 'window') this.windows.push(mesh);
+
+  // 7️⃣ Guardar la base del muro
+  (mesh.userData as any).baseY = baseY;
+
+  return mesh;
+}
+
+
+
+
+
 
 
 }
