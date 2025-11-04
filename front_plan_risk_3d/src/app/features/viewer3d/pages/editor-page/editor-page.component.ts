@@ -27,6 +27,9 @@ import { ModelsService } from '../../services/models.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPageComponent {
+analizarModelo() {
+throw new Error('Method not implemented.');
+}
 
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
@@ -44,6 +47,7 @@ export class EditorPageComponent {
   //bandera para abrir el presupuesto
   public pricesForm = signal<boolean>(false);
   public budgetForm = signal<boolean>(false);
+  public chatBoxModal=signal<boolean>(false);//usar en el @if
 
 
   year = new Date().getFullYear();
@@ -678,6 +682,9 @@ export class EditorPageComponent {
   }
   public toggleRotationModal() {
     this.rotationModalOpen.set(!this.rotationModalOpen());
+  }
+  public toggleChatBoxModal() {//usar para el chatbox
+    this.chatBoxModal.set(!this.chatBoxModal());
   }
 
   public resetScale() {
