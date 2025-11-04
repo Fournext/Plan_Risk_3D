@@ -25,26 +25,35 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    # ---------Subir a Premium
+    # --------- Subir a Premium (aumenta 30 días si ya era premium)
     @action(detail=True, methods=['post'])
     def mejorar(self, request, pk=None):
         usuario = self.get_object()
-        fecha_exp = request.data.get('fecha_expiracion_plan')
 
-        usuario.rol = 'usuario_premium'
-        if fecha_exp:
-            usuario.fecha_expiracion_plan = fecha_exp
+        if usuario.rol == 'usuario_premium':
+            if usuario.fecha_expiracion_plan:
+                usuario.fecha_expiracion_plan += timedelta(days=30)
+            else:
+                usuario.fecha_expiracion_plan = date.today() + timedelta(days=30)
+        else:
+            usuario.rol = 'usuario_premium'
+            if usuario.fecha_expiracion_plan:
+                usuario.fecha_expiracion_plan += timedelta(days=30)
+            else:
+                usuario.fecha_expiracion_plan = date.today() + timedelta(days=30)
+
         usuario.save()
-
         return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
 
-    # ----------Bajar a Normal
+    # ---------- Bajar a Normal (no hace nada si ya era normal)
     @action(detail=True, methods=['post'])
     def degradar(self, request, pk=None):
         usuario = self.get_object()
-        usuario.rol = 'usuario_normal'
-        usuario.fecha_expiracion_plan = None
-        usuario.save()
+
+        if usuario.rol == 'usuario_premium':
+            usuario.rol = 'usuario_normal'
+            usuario.fecha_expiracion_plan = None
+            usuario.save()
 
         return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
 

@@ -28,6 +28,12 @@ export const privateRoutes: Routes = [
         loadComponent: () => import('../features/viewer3d/pages/editor-page/editor-page.component')
           .then(m => m.EditorPageComponent)
       },
+      {
+        path: 'pago',
+        title: 'Pago',
+        loadComponent: () => import('../features/users/pages/payment/payment.component')
+          .then(m => m.PaymentComponent)
+      },
       { path: '**', redirectTo: 'perfil' }
     ]
   }
