@@ -25,29 +25,6 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    # ---------Subir a Premium
-    @action(detail=True, methods=['post'])
-    def mejorar(self, request, pk=None):
-        usuario = self.get_object()
-        fecha_exp = request.data.get('fecha_expiracion_plan')
-
-        usuario.rol = 'usuario_premium'
-        if fecha_exp:
-            usuario.fecha_expiracion_plan = fecha_exp
-        usuario.save()
-
-        return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
-
-    # ----------Bajar a Normal
-    @action(detail=True, methods=['post'])
-    def degradar(self, request, pk=None):
-        usuario = self.get_object()
-        usuario.rol = 'usuario_normal'
-        usuario.fecha_expiracion_plan = None
-        usuario.save()
-
-        return Response(UsuarioSerializer(usuario).data, status=status.HTTP_200_OK)
-
     def perform_create(self, serializer):
         password = serializer.validated_data.get("password")
         if password:
