@@ -27,7 +27,7 @@ export class PaymentComponent implements OnInit {
   
   plans = [
     { id: 'usuario_normal', name: 'Plan Normal', price: 0, features: ['Hasta 5 proyectos', 'Soporte por email'] },
-    { id: 'usuario_premium', name: 'Plan Premium', price: 30, features: ['Proyectos ilimitados', 'Soporte prioritario'] }
+    { id: 'usuario_premium', name: 'Plan Premium', price: 40, features: ['Proyectos ilimitados', 'Soporte prioritario'] }
   ];
   
   selectedPlan = this.plans[0];
