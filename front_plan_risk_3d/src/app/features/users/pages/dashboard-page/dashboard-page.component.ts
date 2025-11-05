@@ -1,6 +1,6 @@
 import { Validators } from '@angular/forms';
 import { Model3D } from './../../../../models/interfaces/model3D/model3D.interface';
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ModelsService } from '../../../viewer3d/services/models.service';
 import { Router } from '@angular/router';
 import { TokenStorageService } from '../../../auth/services/tokenStorage.service';
@@ -21,6 +21,7 @@ export class DashboardPageComponent implements OnInit {
   private toastr = inject(ToastrService);
 
   listModels = computed(() => this.model3DService.listModelsUser());
+  imagePreview = signal<string | null>(null);
 
   openModel(modelo: Model3D) {
     localStorage.setItem('modelo', JSON.stringify(modelo));
@@ -50,5 +51,12 @@ export class DashboardPageComponent implements OnInit {
       });
     }
     input.value = '';
+  }
+
+  openModalViewer(imagen:string){
+    this.imagePreview.set(imagen);
+  }
+  closeModalViewer(){
+    this.imagePreview.set(null);
   }
 }

@@ -27,6 +27,9 @@ import { ModelsService } from '../../services/models.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPageComponent {
+analizarModelo() {
+throw new Error('Method not implemented.');
+}
 
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
@@ -34,10 +37,17 @@ export class EditorPageComponent {
   private modelService = inject(ModelsService);
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   // --- Estado UI adicional ---
-  menuOpen = false;
+  public menuOpen = false;
+  public textureModalOpen = signal<boolean>(false);
+  public positionObjectsModalOpen = signal<boolean>(false);
+  public transformModalOpen = signal<boolean>(false);
+  public createObjectModalOpen = signal<boolean>(false);
+  public rotationModalOpen = signal<boolean>(false);
+
   //bandera para abrir el presupuesto
-  pricesForm = signal<boolean>(false);
-  budgetForm = signal<boolean>(false);
+  public pricesForm = signal<boolean>(false);
+  public budgetForm = signal<boolean>(false);
+  public chatBoxModal=signal<boolean>(false);//usar en el @if
 
 
   year = new Date().getFullYear();
@@ -69,6 +79,16 @@ export class EditorPageComponent {
   selectedHeight = signal<number>(1);
   selectedDepth = signal<number>(1);
   hasSelection = signal<boolean>(false);
+
+  selectedScaleX = signal<number>(1);
+  selectedScaleY = signal<number>(1);
+  selectedScaleZ = signal<number>(1);
+
+  selectedRotationX = signal<number>(0);
+  selectedRotationY = signal<number>(0);
+  selectedRotationZ = signal<number>(0);
+
+
 
 
   //-----
@@ -342,6 +362,10 @@ export class EditorPageComponent {
     if (axis === 'z') mesh.scale.z = val;
 
     mesh.updateMatrixWorld(true);
+    this.selectedScaleX.set(mesh.scale.x);
+    this.selectedScaleY.set(mesh.scale.y);
+    this.selectedScaleZ.set(mesh.scale.z);
+
 
     // 🧱 Bounding box después de escalar
     const boxAfter = new THREE.Box3().setFromObject(mesh);
@@ -442,13 +466,23 @@ export class EditorPageComponent {
       this.selectedWidth.set(size.x);
       this.selectedHeight.set(size.y);
       this.selectedDepth.set(size.z);
+      this.selectedScaleX.set(mesh.scale.x);
+      this.selectedScaleY.set(mesh.scale.y);
+      this.selectedScaleZ.set(mesh.scale.z);
+
+      // 🔹 👉 Aquí agregás la rotación actual del objeto seleccionado
+      this.selectedRotationX.set(THREE.MathUtils.radToDeg(mesh.rotation.x));
+      this.selectedRotationY.set(THREE.MathUtils.radToDeg(mesh.rotation.y));
+      this.selectedRotationZ.set(THREE.MathUtils.radToDeg(mesh.rotation.z));
+
 
       const mat = mesh.material as THREE.MeshStandardMaterial;
       mat.emissive.setHex(0x333333);
 
       this.transformControls.attach(mesh);
       console.log("Seleccionado:", mesh.name);
-    } else {
+    }
+    else {
       if (this.selectedMesh) {
         const prevMat = this.selectedMesh.material as THREE.MeshStandardMaterial;
         prevMat.emissive.setHex(0x000000);
@@ -456,6 +490,17 @@ export class EditorPageComponent {
       this.selectedMesh = null;
       this.transformControls.detach();
       this.hasSelection.set(false); // ✅ sin selección
+      this.selectedMesh = null;
+      this.transformControls.detach();
+      this.hasSelection.set(false);
+      this.selectedScaleX.set(1);
+      this.selectedScaleY.set(1);
+      this.selectedScaleZ.set(1);
+      this.selectedRotationX.set(0);
+      this.selectedRotationY.set(0);
+      this.selectedRotationZ.set(0);
+
+
     }
 
   }
@@ -582,7 +627,71 @@ export class EditorPageComponent {
   }
 
 
+  createElement(type: 'wall' | 'door' | 'window') {
+    if (!this.modelo3D) {
+      console.warn('⚠️ No hay modelo cargado aún');
+      return;
+    }
+
+    // Crear en posición frente a la cámara
+    const forward = new THREE.Vector3(0, 0, -2);
+    forward.applyQuaternion(this.camera.quaternion);
+    const position = this.camera.position.clone().add(forward);
+
+    const newMesh = this.modelo3D.createElement(type, 2, 3, 0.4, position);
+
+    // Auto-seleccionar el objeto recién creado
+    this.selectedMesh = newMesh;
+    this.hasSelection.set(true);
+    this.transformControls.attach(newMesh);
+  }
+
+
+  onRotationChange(axis: 'x' | 'y' | 'z', value: string) {
+    if (!this.selectedMesh) return;
+    const mesh = this.selectedMesh;
+
+    const angleDeg = parseFloat(value);
+    const angleRad = THREE.MathUtils.degToRad(angleDeg);
+
+    if (axis === 'x') mesh.rotation.x = angleRad;
+    if (axis === 'y') mesh.rotation.y = angleRad;
+    if (axis === 'z') mesh.rotation.z = angleRad;
+
+    // Actualizar señales
+    this.selectedRotationX.set(THREE.MathUtils.radToDeg(mesh.rotation.x));
+    this.selectedRotationY.set(THREE.MathUtils.radToDeg(mesh.rotation.y));
+    this.selectedRotationZ.set(THREE.MathUtils.radToDeg(mesh.rotation.z));
+  }
 
 
 
+
+  public toggleTextureModal() {
+    this.textureModalOpen.set(!this.textureModalOpen());
+  }
+
+  public togglePositionObjectsModal() {
+    this.positionObjectsModalOpen.set(!this.positionObjectsModalOpen());
+  }
+  public toggleTransformModal() {
+    this.transformModalOpen.set(!this.transformModalOpen());
+  }
+  public toggleCreateObjectModal() {
+    this.createObjectModalOpen.set(!this.createObjectModalOpen());
+  }
+  public toggleRotationModal() {
+    this.rotationModalOpen.set(!this.rotationModalOpen());
+  }
+  public toggleChatBoxModal() {//usar para el chatbox
+    this.chatBoxModal.set(!this.chatBoxModal());
+  }
+
+  public resetScale() {
+    if (!this.selectedMesh) return;
+    this.selectedMesh.scale.set(1, 1, 1);
+    this.selectedScaleX.set(1);
+    this.selectedScaleY.set(1);
+    this.selectedScaleZ.set(1);
+  }
 }
