@@ -1,25 +1,73 @@
-<section class="min-h-full flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white  rounded-[10px] animate-fade-in">
+<section
+  class="min-h-full flex flex-col bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white rounded-[10px] animate-fade-in overflow-hidden">
+
   <!-- Contenido principal -->
-  <main class="flex-1 p-6">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      @for (item of listModels(); track item.id;let i=$index) {
+  <main class="flex-1 p-6 flex flex-col gap-4">
+
+    <!-- === CONTENEDOR DE MODELOS === -->
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 max-h-[45vh] overflow-y-auto p-4 bg-[#ffffff43] rounded-md shadow-inner custom-scrollbar">
+
+      @for (item of listModels(); track item.id; let i = $index) {
       <div
-        class="h-32 rounded-md bg-cover bg-center flex justify-center items-center gap-2 text-black font-bold shadow-xl/30 hover:scale-[1.02]"
+        class="h-36 rounded-md bg-cover bg-center flex flex-col justify-center items-center gap-2 text-black font-semibold shadow-lg transition hover:scale-[1.02]"
         [style.background-image]="'url(http://localhost:8000' + item.plan_file + ')'">
-        <span>
-          Modelo: {{i+1}}
-        </span>
-        <button class="bg-green-500 hover:bg-green-700 text-white px-2 py-1 rounded-[10px]"
-          (click)="openModel(item)">Abrir</button>
+        <span>Modelo {{ i + 1 }}</span>
+        <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-[5px] transition"
+          (click)="openModel(item)">
+          Abrir
+        </button>
       </div>
       }
+
+
+      <!-- Subir archivo -->
       <div
-        class="h-32 rounded-md bg-[#1B3C53] flex items-center justify-center font-bold text-white flex-col shadow-xl/30 hover:scale-[1.02]">
+        class="h-36 rounded-md bg-[#1B3C53] flex flex-col items-center justify-center font-bold text-white shadow-lg hover:scale-[1.02] transition">
         <label for="file"
-          class="border p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:inset-shadow-sm hover:inset-shadow-white">Seleccionar
-          archivo</label>
-        <input type="file" (change)="onFileSelected($event)" id="file" class="hidden">
+          class="border border-white/40 p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:bg-white/20 transition">
+          📁 Seleccionar archivo
+        </label>
+        <input type="file" (change)="onFileSelected($event)" id="file" class="hidden" />
       </div>
+    </div>
+
+    <hr class="border-white/50">
+
+    <!-- === CONTENEDOR DE IMÁGENES === -->
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 max-h-[45vh] overflow-y-auto p-4 bg-[#ffffff43] rounded-md shadow-inner custom-scrollbar">
+
+      @for (item of listModels(); track item.id; let i = $index) {
+      <div
+        class="relative flex flex-col items-center justify-center gap-2 rounded-md shadow-lg overflow-hidden hover:scale-[1.02] transition">
+        <img src="http://localhost:8000{{ item.plan_image }}" alt="Vista previa del modelo"
+          class="w-full h-44 object-cover rounded-md shadow-md hover:scale-[1.02] transition absolute z-o" />
+        <span class=" text-black px-2 py-1  font-semibold z-10">Modelo {{ i + 1 }}</span>
+        <div class="flex gap-2 bottom-10 z-10">
+          <button (click)="openModalViewer(item.plan_image||'')"
+            class="bg-green-600 hover:bg-green-700 text-white px-3  rounded-[5px] py-1 transition ">Ver</button>
+          <button class="bg-yellow-600 hover:bg-yellow-700 text-white px-3  rounded-[5px] py-1 transition ">Verificar
+            Blockchain</button>
+        </div>
+      </div>
+      }
+
+      @if(imagePreview()){
+      <div class="fixed inset-0 bg-black/70 flex justify-center items-center z-50 animate-fade-in"
+        (click)="closeModalViewer()">
+        <div
+          class="relative bg-white rounded-lg shadow-2xl max-w-4xl w-[90%] max-h-[90vh] flex justify-center items-center overflow-hidden"
+          (click)="$event.stopPropagation()">
+          <img [src]="'http://localhost:8000' + imagePreview()" alt="Vista ampliada"
+            class="max-w-full max-h-[90vh] object-contain" />
+          <button (click)="closeModalViewer()"
+            class="absolute top-3 right-3 text-gray-600 hover:text-black text-2xl font-bold">
+            ✖
+          </button>
+        </div>
+      </div>
+      }
     </div>
   </main>
 </section>
