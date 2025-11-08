@@ -48,23 +48,23 @@ def process_and_save_glb(job, det):
     cid_meta = "bafy-placeholder-meta"
 
     # ===== 5) Registrar en la blockchain Polygon Amoy =====
-    try:
-        tx_hash = register_on_chain(
-            job.id,
-            cid_img,
-            cid_json,
-            cid_glb,
-            "0x" + sha_img,
-            "0x" + sha_json,
-            "0x" + sha_glb,
-            cid_meta
-        )
-        if tx_hash:
-            print(f"✅ Modelo registrado en blockchain. Tx: {tx_hash}")
-            print(f"🔍 Ver en: https://amoy.polygonscan.com/tx/{tx_hash}")
-            job.blockchain_tx = tx_hash  # campo opcional en tu modelo (añádelo si no existe)
-    except Exception as e:
-        print(f"⚠️ No se pudo registrar en blockchain: {e}")
+    # try:
+    #     tx_hash = register_on_chain(
+    #         job.id,
+    #         cid_img,
+    #         cid_json,
+    #         cid_glb,
+    #         "0x" + sha_img,
+    #         "0x" + sha_json,
+    #         "0x" + sha_glb,
+    #         cid_meta
+    #     )
+    #     if tx_hash:
+    #         print(f"✅ Modelo registrado en blockchain. Tx: {tx_hash}")
+    #         print(f"🔍 Ver en: https://amoy.polygonscan.com/tx/{tx_hash}")
+    #         job.blockchain_tx = tx_hash  # campo opcional en tu modelo (añádelo si no existe)
+    # except Exception as e:
+    #     print(f"⚠️ No se pudo registrar en blockchain: {e}")
 
     # ===== 6) Guardar job =====
     job.save()
