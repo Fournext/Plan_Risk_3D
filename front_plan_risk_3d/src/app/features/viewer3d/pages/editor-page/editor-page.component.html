@@ -1,5 +1,5 @@
-<div class="relative animate-fade-in">
-  <details class="inline-block absolute right-1 top-1" #dropdown>
+<div class="relative animate-fade-in ">
+  <details class="inline-block absolute right-1 top-1 z-50" #dropdown>
     <summary
       class="flex items-center justify-between gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg cursor-pointer select-none hover:bg-gray-700">
       Opciones
@@ -54,7 +54,7 @@
   </details>
 
   <div
-    class="bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white flex-1 flex flex-col rounded-[10px] h-100vh box-border">
+    class="bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] text-white flex-1 flex flex-col rounded-[10px] min-h-[80vh] max-h-[86vh] box-border">
     <canvas #canvas class="min-w-full rounded-[10px] min-h-[80vh] flex-1"></canvas>
   </div>
   <div class="flex gap-4 w-min-[100vw]  p-1 bg-gray-100 rounded-xl shadow-inner mt-1 justify-center  ">
