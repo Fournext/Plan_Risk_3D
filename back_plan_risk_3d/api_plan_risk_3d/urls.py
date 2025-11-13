@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/set_plan/', include('plans.urls')),
     path('api/users/', include('users.urls')),
     path('api/presupuesto/', include('presupuesto.urls')),
+    path('api/suggestion_risk/', include('suggestion_risk.urls')),
 ]
 
 # Servir archivos media en desarrollo

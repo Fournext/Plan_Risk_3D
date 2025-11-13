@@ -251,3 +251,11 @@ button.toast-close-button {
   animation: fade-in-up 0.2s ease-out;
 }
 
+/* Ocultar scrollbars sin desactivar scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE y Edge */
+  scrollbar-width: none;    /* Firefox */
+}

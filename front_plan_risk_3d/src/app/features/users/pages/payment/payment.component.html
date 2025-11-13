@@ -1,0 +1,126 @@
+<main class="flex bg-gradient-to-b from-[#447D9B] to-[#EEEFE0] p-[19px] min-h-full overflow-hidden rounded-[10px] no-scrollbar">
+  <article class="max-w-[1200px] w-full mx-auto bg-[#ffffff43] rounded-lg shadow-inner overflow-y-auto h-[calc(97vh-3rem)] p-6 no-scrollbar">
+    <!-- HEADER -->
+    <header class="mb-8  py-2">
+      <h2 class="text-3xl font-extrabold text-gray-800 mb-1">Planes de Suscripción</h2>
+      <p class="text-gray-600">Elige el plan que mejor se adapte a tus necesidades</p>
+    </header>
+
+    <!-- PLANES DISPONIBLES
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">-->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 justify-center max-w-4xl mx-auto">
+
+      <div *ngFor="let plan of plans"
+        (click)="selectPlan(plan)"
+        [class.ring-2]="selectedPlan.id === plan.id"
+        [class.ring-blue-500]="selectedPlan.id === plan.id"
+        class="bg-white rounded-lg shadow-lg p-6 cursor-pointer transition-all hover:shadow-xl hover:scale-105"
+        [class.scale-105]="selectedPlan.id === plan.id">
+        
+        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ plan.name }}</h3>
+        <p class="text-3xl font-extrabold text-blue-600 mb-4">
+          ${{ plan.price }}<span class="text-lg text-gray-600">/mes</span>
+        </p>
+        
+        <ul class="space-y-2 mb-6">
+          <li *ngFor="let feature of plan.features" class="flex items-center text-gray-700">
+            <span class="text-green-500 mr-2">✓</span>
+            {{ feature }}
+          </li>
+        </ul>
+        
+        <button
+          [class.bg-blue-600]="selectedPlan.id === plan.id"
+          [class.bg-gray-300]="selectedPlan.id !== plan.id"
+          class="w-full py-2 rounded font-semibold transition-all"
+          [class.text-white]="selectedPlan.id === plan.id"
+          [class.text-gray-800]="selectedPlan.id !== plan.id">
+          {{ selectedPlan.id === plan.id ? 'Seleccionado' : 'Seleccionar' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- FORMULARIO DE PAGO -->
+    <section class="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
+      <h3 class="text-2xl font-bold text-gray-800 mb-6">Información de Pago</h3>
+      
+      <!-- Resumen del plan -->
+      <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6">
+        <p class="text-gray-700">
+          <span class="font-semibold">Plan seleccionado:</span> {{ selectedPlan.name }}
+        </p>
+        <p class="text-gray-700">
+          <span class="font-semibold">Monto a pagar:</span>
+          <span class="text-2xl font-bold text-blue-600">${{ selectedPlan.price }}</span>
+        </p>
+      </div>
+
+      <form [formGroup]="paymentForm" (submit)="onSubmit()" class="space-y-4">
+        <!-- Nombre del titular -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Titular</label>
+          <input
+            type="text"
+            formControlName="cardholderName"
+            placeholder="Juan Pérez"
+            class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+          />
+          <!-- <p class="text-xs text-gray-500 mt-1">Ej: números de tarjeta de prueba 4242 4242 4242 4242</p> -->
+        </div>
+
+        <!-- Número de tarjeta -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Número de Tarjeta</label>
+          <input
+            type="text"
+            placeholder="4242 4242 4242 4242"
+            (input)="formatCardNumber($event)"
+            class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+            maxlength="19"
+          /><!--
+          <p class="text-xs text-gray-500 mt-1">Modo de prueba: usa 4242 4242 4242 4242</p>-->
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Expiración</label>
+            <input
+              type="text"
+              placeholder="MM/YY"
+              (input)="formatExpiryDate($event)"
+              class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              maxlength="5"
+            />
+            <p class="text-xs text-gray-500 mt-1">Ej: 12/25</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+            <input
+              type="text"
+              placeholder="123"
+              (input)="formatCVV($event)"
+              class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              maxlength="4"
+            />
+            <p class="text-xs text-gray-500 mt-1">Código de 3-4 dígitos</p>
+          </div>
+        </div>
+
+        <!-- Botón submit -->
+        <button
+          type="submit"
+          [disabled]="isProcessing"
+          class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          <span *ngIf="!isProcessing">Pagar ${{ selectedPlan.price }}</span>
+          <span *ngIf="isProcessing">Procesando...</span>
+        </button>
+      </form>
+
+      <!-- Nota de seguridad -->
+      <p class="text-xs text-gray-500 text-center mt-4">
+        🔒 Tus datos están seguros. Los datos de la tarjeta se procesan a través de Stripe.
+      </p>
+    </section>
+  </article>
+</main>

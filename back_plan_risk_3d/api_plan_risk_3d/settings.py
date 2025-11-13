@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from datetime import timedelta
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +58,7 @@ INSTALLED_APPS = [
     'plans',
     'users',
     'presupuesto',
+    'suggestion_risk',
 ]
 
 MIDDLEWARE = [
@@ -95,7 +101,6 @@ DATABASES = {
         'NAME': 'plan_risk_db',      # nombre de tu base de datos
         'USER': 'postgres',          # tu usuario de PostgreSQL
         'PASSWORD': '6305913',   # la contraseña de ese usuario
-        # 'PASSWORD': '14776280',   # la contraseña de ese usuario
         'HOST': 'localhost',         # o la IP del servidor si es remoto
         'PORT': '5432',              # puerto por defecto de PostgreSQL
     }
@@ -165,3 +170,6 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:4200','http://127.0.0.1:4200']
 CSRF_COOKIE_SECURE = False
 CORS_ALLOW_CREDENTIALS = True
 # AUTH_USER_MODEL = 'view_url_3D.Usuario'
+
+# Gemini API Configuration
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')

@@ -7,6 +7,7 @@ import {
   inject,
   PLATFORM_ID,
   signal,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { DecimalPipe, isPlatformBrowser } from '@angular/common';
 import * as THREE from 'three';
@@ -18,6 +19,8 @@ import { PricesForm } from "../../components/prices-form/prices-form";
 import { BudgetService } from '../../services/budget.service';
 import { BudgetResponse } from '../../../../models/interfaces/model3D/budget.interface';
 import { ModelsService } from '../../services/models.service';
+import { StructuralAnalysisService } from '../../services/structural-analysis.service';
+import { StructuralAnalysis } from '../../../../models/interfaces/model3D/structural_analysis.interface';
 
 
 @Component({
@@ -27,14 +30,31 @@ import { ModelsService } from '../../services/models.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPageComponent {
-analizarModelo() {
-throw new Error('Method not implemented.');
+async analizarModelo() {
+  if(!this.modelo3D) return;
+  const model = JSON.parse(localStorage.getItem('modelo') || '{}');
+  const model3D: { blob: Blob; filename: string } = await this.modelo3D.exportAsGLB(`job_${model.id}.glb`);
+  this.analysisService.getStructuralAnalysis(new File([model3D.blob], model3D.filename)).subscribe({
+    next: (response) => {
+      this.structuralAnalysis = response;
+      // Forzar detección porque el componente usa OnPush
+      try {
+        this.cdr.markForCheck();
+      } catch (e) {
+        // no fatal, solo log
+        console.warn('No se pudo marcar vista para detección:', e);
+      }
+    }
+  });
 }
 
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
   private budgetService = inject(BudgetService);
   private modelService = inject(ModelsService);
+  private analysisService = inject(StructuralAnalysisService);
+  // ChangeDetectorRef para forzar actualización con ChangeDetectionStrategy.OnPush
+  private cdr = inject(ChangeDetectorRef);
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
   // --- Estado UI adicional ---
   public menuOpen = false;
@@ -51,6 +71,51 @@ throw new Error('Method not implemented.');
 
 
   year = new Date().getFullYear();
+  structuralAnalysis: StructuralAnalysis | null = null;
+
+  // Devuelve una representación de texto legible del análisis para mostrar en el textarea
+  formatStructuralAnalysis(): string {
+    if (!this.structuralAnalysis) return 'Sin análisis estructural por el momento...';
+    const s = this.structuralAnalysis;
+    const anali = s.analisis;
+    let out = `Archivo: ${s.nombre_archivo}\n\n`;
+
+    if (anali?.resumen_general) {
+      const rg = anali.resumen_general;
+      out += `Resumen general:\n- Nivel riesgo global: ${rg.nivel_riesgo_global}\n- Elementos correctos: ${rg.elementos_correctos}\n- Elementos incorrectos: ${rg.elementos_incorrectos}\n- Comentario: ${rg.comentario ?? '-'}\n\n`;
+    }
+
+    if (anali?.elementos_bien_hechos && anali.elementos_bien_hechos.length) {
+      out += 'Elementos bien hechos:\n';
+      anali.elementos_bien_hechos.forEach((e) => {
+        out += `- ${e.tipo}: ${e.cantidad} (material: ${e.material_usado})`;
+        if (e.por_que_esta_bien) out += ` — ${e.por_que_esta_bien}`;
+        out += '\n';
+      });
+      out += '\n';
+    }
+
+    if (anali?.elementos_mal_hechos && anali.elementos_mal_hechos.length) {
+      out += 'Elementos mal hechos:\n';
+      anali.elementos_mal_hechos.forEach((e) => {
+        out += `- ${e.tipo}: ${e.cantidad} (material: ${e.material_usado})`;
+        if (e.problema) out += ` — Problema: ${e.problema}`;
+        if (e.nivel_riesgo) out += ` — Nivel riesgo: ${e.nivel_riesgo}`;
+        out += '\n';
+      });
+      out += '\n';
+    }
+
+    if (anali?.recomendaciones && anali.recomendaciones.length) {
+      out += 'Recomendaciones:\n';
+      anali.recomendaciones.forEach((r) => {
+        out += `- Para ${r.para_elemento} (afectados: ${r.cantidad_afectada}): cambiar ${r.cambiar_de} → ${r.cambiar_a}\n  Razón: ${r.razon}\n  Urgencia: ${r.urgencia ?? '-'}\n`;
+      });
+      out += '\n';
+    }
+
+    return out.trim();
+  }
 
   // --- Three.js: Pivots de escena ---
   private renderer!: THREE.WebGLRenderer;
