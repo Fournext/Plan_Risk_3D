@@ -3,6 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { Model3D } from '../../../models/interfaces/model3D/model3D.interface';
 import { Observable, switchMap, tap } from 'rxjs';
+import { SaveModelResponse } from '../../../models/interfaces/responses/SaveModelResponse.interface';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,7 @@ import { Observable, switchMap, tap } from 'rxjs';
 export class ModelsService {
   private http = inject(HttpClient);
   private API = environment.endpoint;
-
+  public isLoading = signal<boolean>(false);
   public listModelsUser = signal<Model3D[]>([]);
 
   getModels(): Observable<any> {
@@ -42,7 +43,16 @@ export class ModelsService {
     );
   }
 
+  onSaveModel(file: File, usuario: number): Observable<SaveModelResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('usuario', usuario.toString());
+    return this.http.post<SaveModelResponse>(`${this.API}api/view_model/upload-glb/`, formData).pipe(
+      tap(() => this.getModels().subscribe())
+    );
+  }
 
+  
 
   constructor() { }
 

@@ -21,32 +21,16 @@ import { BudgetResponse } from '../../../../models/interfaces/model3D/budget.int
 import { ModelsService } from '../../services/models.service';
 import { StructuralAnalysisService } from '../../services/structural-analysis.service';
 import { StructuralAnalysis } from '../../../../models/interfaces/model3D/structural_analysis.interface';
+import { Spinner } from "../../../../layout/components/spinner/spinner";
 
 
 @Component({
   selector: 'app-editor-page',
-  imports: [DecimalPipe, BudgetForm, PricesForm],
+  imports: [DecimalPipe, BudgetForm, PricesForm, Spinner],
   templateUrl: './editor-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EditorPageComponent {
-async analizarModelo() {
-  if(!this.modelo3D) return;
-  const model = JSON.parse(localStorage.getItem('modelo') || '{}');
-  const model3D: { blob: Blob; filename: string } = await this.modelo3D.exportAsGLB(`job_${model.id}.glb`);
-  this.analysisService.getStructuralAnalysis(new File([model3D.blob], model3D.filename)).subscribe({
-    next: (response) => {
-      this.structuralAnalysis = response;
-      // Forzar detección porque el componente usa OnPush
-      try {
-        this.cdr.markForCheck();
-      } catch (e) {
-        // no fatal, solo log
-        console.warn('No se pudo marcar vista para detección:', e);
-      }
-    }
-  });
-}
 
   // --- Inyección y referencias al DOM ---
   private platformId = inject(PLATFORM_ID);
@@ -67,11 +51,50 @@ async analizarModelo() {
   //bandera para abrir el presupuesto
   public pricesForm = signal<boolean>(false);
   public budgetForm = signal<boolean>(false);
-  public chatBoxModal=signal<boolean>(false);//usar en el @if
+  public chatBoxModal = signal<boolean>(false);//usar en el @if
 
 
   year = new Date().getFullYear();
   structuralAnalysis: StructuralAnalysis | null = null;
+
+
+  //estado de carga del presupuesto, usado para los spinner
+  public isLoadingBudget() {
+    return this.budgetService.isLoading();
+  }
+
+  public changeStateIsLoading() {
+    this.budgetService.isLoading.set(!this.budgetService.isLoading());
+  }
+
+  //estado de carga del presupuesto, usado para los spinner
+  public isLoadingAnalisis() {
+    return this.analysisService.isLoading();
+  }
+
+  public changeAnalisisIsLoading() {
+    this.analysisService.isLoading.set(!this.analysisService.isLoading());
+  }
+
+  async analizarModelo() {
+    if (!this.modelo3D) return;
+    const model = JSON.parse(localStorage.getItem('modelo') || '{}');
+    const model3D: { blob: Blob; filename: string } = await this.modelo3D.exportAsGLB(`job_${model.id}.glb`);
+    this.changeAnalisisIsLoading();
+    this.analysisService.getStructuralAnalysis(new File([model3D.blob], model3D.filename)).subscribe({
+      next: (response) => {
+        this.structuralAnalysis = response;
+        // Forzar detección porque el componente usa OnPush
+        this.changeAnalisisIsLoading();
+        try {
+          this.cdr.markForCheck();
+        } catch (e) {
+          // no fatal, solo log
+          console.warn('No se pudo marcar vista para detección:', e);
+        }
+      }
+    });
+  }
 
   // Devuelve una representación de texto legible del análisis para mostrar en el textarea
   formatStructuralAnalysis(): string {
@@ -130,6 +153,10 @@ async analizarModelo() {
   private selectedMesh: THREE.Mesh | null = null;
   private transformControls!: TransformControls;
 
+  private floor!: THREE.Mesh;
+  public isCreatingElement: 'wall' | 'door' | 'window' | null = null;
+
+
 
   // 🔹 Estados del panel de control
   posX = signal<number>(0);
@@ -178,12 +205,11 @@ async analizarModelo() {
 
   ngAfterViewInit(): void {
     //aqui voy a tener que cargar los materiales guardados en el local storage
-
-
-
     // Ejecutar solo en cliente
     if (!isPlatformBrowser(this.platformId)) return;
     // ✅ Leer modelo desde localStorage
+
+
     const modeljson = localStorage.getItem('modelo');
     let model: any = null;
 
@@ -200,6 +226,36 @@ async analizarModelo() {
       // 🔹 Opción: asignar un modelo por defecto si querés
       // model = { glb_model: '/media/models/mimodelo.glb' };
     }
+
+
+    // 5) Cargar modelo 3D
+    // 🕒 Retraso breve para asegurar que el canvas y la escena estén listos
+    setTimeout(() => {
+      let url: string = '';
+      if (!model || !model.glb_model) {
+        console.warn('⚠️ No se encontró modelo en localStorage.');
+        url = 'https://res.cloudinary.com/diqqfka6g/image/upload/v1763521878/vacio_wama55.glb';
+      } else {
+        url = `http://localhost:8000${model.glb_model}`;
+      }
+      console.log('🧱 Cargando modelo desde:', url);
+
+      this.modelo3D = new Modelo3D(
+        this.scene,
+        url,
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(1, 1, 1),
+        new THREE.Euler(0, 0, 0),
+        this.textures,
+        () => {
+          console.log('✅ Modelo cargado correctamente');
+          const obj = this.modelo3D.getObject3D();
+          this.posX.set(obj.position.x);
+          this.posY.set(obj.position.y);
+          this.posZ.set(obj.position.z);
+        }
+      );
+    }, 300);
 
 
 
@@ -296,36 +352,8 @@ async analizarModelo() {
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = 0; // al nivel del grid
-    this.scene.add(floor);
-
-    const url = `http://localhost:8000${model.glb_model}`;
-    // 5) Cargar modelo 3D
-    // 🕒 Retraso breve para asegurar que el canvas y la escena estén listos
-    setTimeout(() => {
-      if (!model || !model.glb_model) {
-        console.warn('⚠️ No se encontró modelo en localStorage.');
-        return;
-      }
-
-      const url = `http://localhost:8000${model.glb_model}`;
-      console.log('🧱 Cargando modelo desde:', url);
-
-      this.modelo3D = new Modelo3D(
-        this.scene,
-        url,
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(1, 1, 1),
-        new THREE.Euler(0, 0, 0),
-        this.textures,
-        () => {
-          console.log('✅ Modelo cargado correctamente');
-          const obj = this.modelo3D.getObject3D();
-          this.posX.set(obj.position.x);
-          this.posY.set(obj.position.y);
-          this.posZ.set(obj.position.z);
-        }
-      );
-    }, 300);
+    this.floor = floor;     // ✔ ahora guardado para raycaster
+    this.scene.add(this.floor);
 
 
     // 6) Loop de animación
@@ -478,12 +506,6 @@ async analizarModelo() {
     }
   }
 
-
-
-
-
-
-
   onTextureChange(url: string) {
     this.selectedTexture.set(url);
     if (!this.modelo3D) return;
@@ -500,10 +522,7 @@ async analizarModelo() {
 
 
   private onCanvasClick(event: MouseEvent) {
-
-
     if (!this.modelo3D) return;
-
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -516,6 +535,14 @@ async analizarModelo() {
       ...this.modelo3D.getDoors(),
       ...this.modelo3D.getWindows(),
     ];
+
+    // 🔥 1) Detectar clic en el piso si estamos creando un elemento
+    const floorHit = this.raycaster.intersectObject(this.floor, true);
+    if (floorHit.length > 0 && this.isCreatingElement) {
+      const pt = floorHit[0].point.clone();
+      this.spawnElementAt(pt);
+      return;
+    }
     const intersects = this.raycaster.intersectObjects(allObjects, true);
 
 
@@ -523,6 +550,11 @@ async analizarModelo() {
       const mesh = intersects[0].object as THREE.Mesh;
       this.selectedMesh = mesh;
       this.hasSelection.set(true); // ✅ ahora Angular sabe que hay selección
+      // 🔥 Actualizar sliders con la posición del objeto seleccionado
+      this.posX.set(mesh.position.x);
+      this.posY.set(mesh.position.y);
+      this.posZ.set(mesh.position.z);
+
 
       // Calcular tamaño actual
       const box = new THREE.Box3().setFromObject(mesh);
@@ -672,13 +704,16 @@ async analizarModelo() {
     // a.download = 'modelo_resumen.json';
     // a.click();
     // URL.revokeObjectURL(url);
+    this.changeStateIsLoading();
     this.budgetService.generateBudget(summary).subscribe({
       next: (response: BudgetResponse) => {
         console.log('Presupuesto generado con éxito:', response);
         this.onShowBudget();
+        this.changeStateIsLoading();
       },
       error: (error) => {
         console.error('No se genero el presupuesto:', error);
+        this.changeStateIsLoading();
       }
     });
   }
@@ -693,23 +728,10 @@ async analizarModelo() {
 
 
   createElement(type: 'wall' | 'door' | 'window') {
-    if (!this.modelo3D) {
-      console.warn('⚠️ No hay modelo cargado aún');
-      return;
-    }
-
-    // Crear en posición frente a la cámara
-    const forward = new THREE.Vector3(0, 0, -2);
-    forward.applyQuaternion(this.camera.quaternion);
-    const position = this.camera.position.clone().add(forward);
-
-    const newMesh = this.modelo3D.createElement(type, 2, 3, 0.4, position);
-
-    // Auto-seleccionar el objeto recién creado
-    this.selectedMesh = newMesh;
-    this.hasSelection.set(true);
-    this.transformControls.attach(newMesh);
+    this.isCreatingElement = type;
+    console.log('👉 Hacé clic en el piso para colocar el elemento:', type);
   }
+
 
 
   onRotationChange(axis: 'x' | 'y' | 'z', value: string) {
@@ -759,4 +781,47 @@ async analizarModelo() {
     this.selectedScaleY.set(1);
     this.selectedScaleZ.set(1);
   }
+
+  spawnElementAt(point: THREE.Vector3) {
+    if (!this.modelo3D || !this.isCreatingElement) return;
+
+    // Sacamos altura del piso desde cualquier muro existente
+    const baseY = this.modelo3D.getWalls().length > 0
+      ? this.modelo3D.getWalls()[0].position.y
+      : 0;
+
+    point.y = baseY;
+
+    const newMesh = this.modelo3D.createElement(
+      this.isCreatingElement,
+      2,   // ancho por defecto
+      3,   // altura por defecto
+      0.4, // profundidad muro
+      point
+    );
+
+    this.selectedMesh = newMesh;
+    this.transformControls.attach(newMesh);
+    this.hasSelection.set(true);
+
+    // desactivar modo creación
+    this.isCreatingElement = null;
+  }
+
+  deleteSelected() {
+    if (!this.selectedMesh || !this.modelo3D) return;
+
+    // Desconectar gizmo
+    this.transformControls.detach();
+
+    // Eliminar realmente el objeto
+    this.modelo3D.removeElement(this.selectedMesh);
+
+    // Limpiar selección
+    this.selectedMesh = null;
+    this.hasSelection.set(false);
+
+    console.log("🗑 Elemento eliminado correctamente");
+  }
+
 }

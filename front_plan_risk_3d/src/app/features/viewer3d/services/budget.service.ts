@@ -12,6 +12,7 @@ export class BudgetService {
 
   private http = inject(HttpClient);
   private API = environment.endpoint;
+  public isLoading=signal<boolean>(false);
   //aqui tenemos que enviar el json con los materiales, cantidad de muros etc para que pueda generar el presupuesto
   public totalCost = signal<number>(0);
   public detalle = signal<Detalle[]>([]);
@@ -20,6 +21,7 @@ export class BudgetService {
   public totalCostDoor = signal<number>(0);
   public totalCostWindow = signal<number>(0);
   public categoryAndMaterials = signal<{ categoria: string; material: string; total: number }[]>([]);
+
 
   generateBudget(modelJson: any): Observable<any> {
     return this.http.post<any>(`${this.API}api/presupuesto/calcular/`, modelJson).pipe(

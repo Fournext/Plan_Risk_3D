@@ -65,7 +65,7 @@
     @if(budgetForm() == true) {
     <app-budget-form [action]="onShowBudget" />
     }
-    <div>
+    <div [hidden]="hasSelection()" class="flex flex-col mx-3">
       <label class="block font-medium mb-1">Rotación Y ({{ rotationY() | number : '1.2-2' }})</label>
       <input type="range" min="0" max="6.28" step="0.01" [value]="rotationY()"
         (input)="onRotationYChange($event.target.value)" class="w-full accent-blue-600" />
@@ -84,6 +84,10 @@
       <button (click)="toggleRotationModal()"
         class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition cursor-pointer">
         Cambiar Rotación
+      </button>
+      <button (click)="deleteSelected()" [disabled]="!hasSelection()"
+        class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition mx-3 cursor-pointer">
+        Eliminar
       </button>
       }
 
@@ -169,9 +173,11 @@
             (input)="onRotationChange('z', $any($event.target).value)" class="w-full accent-blue-600" />
           <div class="text-sm text-gray-600">{{ selectedRotationZ() | number:'1.0-0' }}°</div>
         </div>
+        
       </div>
 
       }
+
     </div>
 
     <!-- Implementar cambiar el lugar de los modelos -->
@@ -183,6 +189,9 @@
         class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition cursor-pointer">
         Cambiar de posición
       </button>
+
+      
+
 
 
 
@@ -231,7 +240,7 @@
       </div>
       }
     </div>
-
+    <!-- implementar el eliminar elemento -->
     <!-- Implementar un modal para la seleccion de texturas -->
     <div class="relative inline-block">
       <!-- Botón -->
@@ -347,12 +356,10 @@
       }
     </div>
 
-
-
-
-
-
-
   </div>
 
 </div>
+@if(isLoadingBudget() || isLoadingAnalisis()) {
+<app-spinner />
+}
+

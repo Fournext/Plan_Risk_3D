@@ -7,6 +7,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 
 
 export class Modelo3D {
+  private scene: THREE.Scene;
   public objeto!: THREE.Object3D;
   private onLoadCallbackList: Array<() => void> = [];
   private loader = new THREE.TextureLoader();
@@ -16,21 +17,35 @@ export class Modelo3D {
 
 
   constructor(
-    private scene: THREE.Scene,
-    private url: string,
+    scene: THREE.Scene | null,
+    private url: string | null,
     public position = new THREE.Vector3(0, 0, 0),
     public scale = new THREE.Vector3(1, 1, 1),
     public rotation = new THREE.Euler(0, 0, 0),
-    private textures: { name: string; url: string }[] = [], // ✅ nuevo
+    private textures: { name: string; url: string }[] = [],
     onLoadCallback?: () => void
   ) {
+    // 🔥 Si NO hay escena → creamos una interna
+    this.scene = scene ?? new THREE.Scene();
+
     if (onLoadCallback) this.onLoadCallbackList.push(onLoadCallback);
     this.cargarModelo();
   }
 
-
-
   private async cargarModelo() {
+    if (!this.url) {
+      console.log("📦 Creando modelo vacío…");
+
+      this.objeto = new THREE.Group();
+      this.objeto.name = "ModeloVacio";
+
+      // Se agrega a la escena interna (aunque no se renderice)
+      this.scene.add(this.objeto);
+
+      this.onLoadCallbackList.forEach(cb => cb());
+      return;
+    }
+
     if (this.url.endsWith('.json')) {
       try {
         const res = await fetch(this.url);
@@ -331,32 +346,32 @@ export class Modelo3D {
   }
 
   exportAsGLB(filename = 'modelo.glb'): Promise<{ blob: Blob, filename: string }> {
-  return new Promise((resolve, reject) => {
-    if (!this.objeto) return reject('No hay modelo cargado');
+    return new Promise((resolve, reject) => {
+      if (!this.objeto) return reject('No hay modelo cargado');
 
-    const exporter = new GLTFExporter();
-    exporter.parse(
-      this.objeto,
-      (result) => {
-        const blob =
-          result instanceof ArrayBuffer
-            ? new Blob([result], { type: 'model/gltf-binary' })
-            : new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const exporter = new GLTFExporter();
+      exporter.parse(
+        this.objeto,
+        (result) => {
+          const blob =
+            result instanceof ArrayBuffer
+              ? new Blob([result], { type: 'model/gltf-binary' })
+              : new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
 
-        // ✅ Ahora sí el nombre queda emparejado al resultado
-        resolve({ blob, filename });
-      },
-      (err) => reject(err),
-      { binary: true }
-    );
-  });
-}
+          // ✅ Ahora sí el nombre queda emparejado al resultado
+          resolve({ blob, filename });
+        },
+        (err) => reject(err),
+        { binary: true }
+      );
+    });
+  }
 
 
   /**
    * 🔽 Descarga un blob usando el nombre proporcionado
    */
-   downloadBlob(blob: Blob, filename: string) {
+  downloadBlob(blob: Blob, filename: string) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -422,79 +437,97 @@ export class Modelo3D {
   }
 
 
-createElement(
-  type: 'wall' | 'door' | 'window',
-  width = 1,
-  height = 3,
-  depth = 0.4,
-  position?: THREE.Vector3
-) {
-  // 1️⃣ Buscar referencia de material según tipo
-  let refArray: THREE.Mesh[] = [];
-  if (type === 'wall') refArray = this.walls;
-  else if (type === 'door') refArray = this.doors;
-  else if (type === 'window') refArray = this.windows;
+  createElement(
+    type: 'wall' | 'door' | 'window',
+    width = 1,
+    height = 3,
+    depth = 0.4,
+    position?: THREE.Vector3
+  ) {
+    // 1️⃣ Buscar referencia de material según tipo
+    let refArray: THREE.Mesh[] = [];
+    if (type === 'wall') refArray = this.walls;
+    else if (type === 'door') refArray = this.doors;
+    else if (type === 'window') refArray = this.windows;
 
-  // 2️⃣ Determinar material base
-  let baseMaterial: THREE.MeshStandardMaterial;
-  if (refArray.length > 0) {
-    baseMaterial = (refArray[0].material as THREE.MeshStandardMaterial).clone();
-  } else {
-    let color = 0xaaaaaa;
-    if (type === 'wall') color = 0x444444;
-    if (type === 'door') color = 0x00ff00;
-    if (type === 'window') color = 0x0000ff;
+    // 2️⃣ Determinar material base
+    let baseMaterial: THREE.MeshStandardMaterial;
+    if (refArray.length > 0) {
+      baseMaterial = (refArray[0].material as THREE.MeshStandardMaterial).clone();
+    } else {
+      let color = 0xaaaaaa;
+      if (type === 'wall') color = 0x444444;
+      if (type === 'door') color = 0x00ff00;
+      if (type === 'window') color = 0x0000ff;
 
-    baseMaterial = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.8,
-      metalness: 0.1,
-      side: THREE.DoubleSide,
-    });
+      baseMaterial = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.8,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+      });
+    }
+
+    // 3️⃣ Calcular altura base (nivel del suelo)
+    let baseY = 0;
+    if (this.walls.length > 0) {
+      const ref = this.walls[0];
+      const box = new THREE.Box3().setFromObject(ref);
+      baseY = box.min.y;
+    }
+
+    // 4️⃣ Posición del nuevo elemento (sin modificar luego)
+    const pos = position ?? new THREE.Vector3(0, 0, 0);
+    pos.y = baseY; // base real del suelo
+
+    // 5️⃣ Crear geometría con pivot en la base (crece solo hacia arriba)
+    const geometry = new THREE.BoxGeometry(width, height, depth);
+
+    // 👇 Fijamos el pivot abajo (para eje Y como altura)
+    geometry.translate(0, height / 2, 0);
+
+    const mesh = new THREE.Mesh(geometry, baseMaterial);
+    
+
+    if (type === 'wall') mesh.name = `wall_internal_${Date.now()}`;
+    if (type === 'door') mesh.name = `door_${Date.now()}`;
+    if (type === 'window') mesh.name = `window_${Date.now()}`;
+    mesh.position.copy(pos);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    // 6️⃣ Añadir al grupo y clasificar
+    this.objeto.add(mesh);
+    if (type === 'wall') this.walls.push(mesh);
+    if (type === 'door') this.doors.push(mesh);
+    if (type === 'window') this.windows.push(mesh);
+
+    // 7️⃣ Guardar la base del muro
+    (mesh.userData as any).baseY = baseY;
+
+    return mesh;
   }
 
-  // 3️⃣ Calcular altura base (nivel del suelo)
-  let baseY = 0;
-  if (this.walls.length > 0) {
-    const ref = this.walls[0];
-    const box = new THREE.Box3().setFromObject(ref);
-    baseY = box.min.y;
+  removeElement(mesh: THREE.Mesh) {
+    if (!this.objeto) return;
+
+    // 1. Detach material + geometry (limpia de GPU)
+    if (mesh.material) {
+      const mat = mesh.material as THREE.Material;
+      mat.dispose?.();
+    }
+    mesh.geometry.dispose();
+
+    // 2. Eliminar del grupo GLTF (REAL)
+    this.objeto.remove(mesh);
+
+    // 3. Eliminar de listas internas
+    this.walls = this.walls.filter(m => m !== mesh);
+    this.doors = this.doors.filter(m => m !== mesh);
+    this.windows = this.windows.filter(m => m !== mesh);
+
+    mesh.removeFromParent();
   }
-
-  // 4️⃣ Posición del nuevo elemento (sin modificar luego)
-  const pos = position ?? new THREE.Vector3(0, 0, 0);
-  pos.y = baseY; // base real del suelo
-
-  // 5️⃣ Crear geometría con pivot en la base (crece solo hacia arriba)
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-
-  // 👇 Fijamos el pivot abajo (para eje Y como altura)
-  geometry.translate(0, height / 2, 0);
-
-  const mesh = new THREE.Mesh(geometry, baseMaterial);
-  mesh.name = `${type}_${Date.now()}`;
-  mesh.position.copy(pos);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-
-  // 6️⃣ Añadir al grupo y clasificar
-  this.objeto.add(mesh);
-  if (type === 'wall') this.walls.push(mesh);
-  if (type === 'door') this.doors.push(mesh);
-  if (type === 'window') this.windows.push(mesh);
-
-  // 7️⃣ Guardar la base del muro
-  (mesh.userData as any).baseY = baseY;
-
-  return mesh;
-}
-
-
-
-
-
-
-
 }
 
 

@@ -7,10 +7,11 @@ import { UserRegister } from '../../../../models/interfaces/users/users.interfac
 import { nextTick } from 'process';
 import { CloudinaryService } from '../../services/cloudinary.service';
 import { Toast, ToastrService } from 'ngx-toastr';
+import { Spinner } from "../../../../layout/components/spinner/spinner";
 
 @Component({
   selector: 'app-perfil-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, Spinner],
   templateUrl: './perfil-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -28,12 +29,6 @@ export class PerfilPageComponent implements OnInit {
 
   isReadOnly: boolean = true;
 
-  switchEdition(): void {
-    this.isReadOnly = !this.isReadOnly;
-  }
-
-
-
   informationForm = this.formBuilder.group({
     nombre: ['', [Validators.minLength(5)]],
     email: ['', [Validators.email]],
@@ -42,6 +37,18 @@ export class PerfilPageComponent implements OnInit {
     fechaExpiracion: [''],
     fechaRegistro: ['']
   });
+
+  public isLoadingImage() {
+    return this.cloudinaryService.isLoading();
+  }
+
+  public changeStateIsLoading() {
+    this.cloudinaryService.isLoading.set(!this.cloudinaryService.isLoading());
+  }
+
+  switchEdition(): void {
+    this.isReadOnly = !this.isReadOnly;
+  }
 
 
 
@@ -78,11 +85,13 @@ export class PerfilPageComponent implements OnInit {
     const currentUser = this.tokenStorageService.getUser();
     if (input.files && input.files.length > 0 && currentUser) {
       const file = input.files[0];
+      this.changeStateIsLoading();
       this.cloudinaryService.uploadImage(file).subscribe({
         next: (response) => {
           this.toastr.success('Imagen subida con éxito', 'Éxito', { timeOut: 3000 });
           console.log('Imagen subida:', response);
-          //actualizaremos al usuario con la nueva url
+          //actualizaremos al usuario con la nueva urlthis.changeStateIsLoading();
+          this.changeStateIsLoading();
           this.userService.editUser(currentUser.id, { url: response.secure_url } as UserRegister).subscribe({
             next: (res) => {
               console.log('Usuario actualizado con nueva imagen:', res);
@@ -95,12 +104,12 @@ export class PerfilPageComponent implements OnInit {
         },
         error: (error) => {
           this.toastr.error('Error al subir la imagen', error.message, { timeOut: 3000 });
+          this.changeStateIsLoading();
         }
       });
     }
 
     input.value = '';
-
   }
 
 

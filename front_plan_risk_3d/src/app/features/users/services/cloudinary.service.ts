@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { catchError, map, Observable, tap, throwError } from 'rxjs';
 import { Cloudinary } from '../../../models/interfaces/cloudinary/cloudinary.interface';
@@ -10,6 +10,7 @@ import { Cloudinary } from '../../../models/interfaces/cloudinary/cloudinary.int
 export class CloudinaryService {
   private uploadPreset: string = 'profiles';
   private cloudName: string = 'diqqfka6g';
+  public isLoading = signal<boolean>(false);
   //dependencies would go here
   private http = inject(HttpClient);
   private API = environment.cloudinary

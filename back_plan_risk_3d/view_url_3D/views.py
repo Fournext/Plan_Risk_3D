@@ -6,6 +6,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status,status
 
+from plans.models import Plan3DJob
+from users.models import Usuario
+
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -20,5 +23,17 @@ def upload_glb(request):
 		for chunk in glb_file.chunks():
 			destination.write(chunk)
 	file_url = settings.MEDIA_URL + glb_file.name
+
+	usuario_id = request.data.get("usuario")
+	try:
+		usuario_instance = Usuario.objects.get(pk=usuario_id)
+	except (ValueError, Usuario.DoesNotExist):
+		return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+	
+	job = Plan3DJob.objects.create(
+		glb_model=glb_file,
+		usuario=usuario_instance
+	)
+	job.save()
 	return Response({'url': file_url}, status=status.HTTP_201_CREATED)
 

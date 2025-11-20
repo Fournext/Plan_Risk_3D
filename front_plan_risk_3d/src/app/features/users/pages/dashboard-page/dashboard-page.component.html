@@ -9,26 +9,54 @@
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 max-h-[45vh] overflow-y-auto p-4 bg-[#ffffff43] rounded-md shadow-inner custom-scrollbar">
 
       @for (item of listModels(); track item.id; let i = $index) {
+      @if(item.plan_file){
       <div
         class="h-36 rounded-md bg-cover bg-center flex flex-col justify-center items-center gap-2 text-black font-semibold shadow-lg transition hover:scale-[1.02]"
         [style.background-image]="'url(http://localhost:8000' + item.plan_file + ')'">
-        <span>Modelo {{ i + 1 }}</span>
+        <span class="text-gray-800 font-bold text-lg drop-shadow-[2px_2px_6px_rgba(0,0,0,0.5)]">
+          Modelo {{ i + 1 }}
+        </span>
+        <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-[5px] transition"
+          (click)="openModel(item)">
+          Abrir
+        </button>
+      </div>
+      }@else {
+      <div
+        class="h-36 rounded-md bg-cover bg-center flex flex-col justify-center items-center gap-2 text-black font-semibold shadow-lg transition hover:scale-[1.02] bg-[url(assets/imagen-defecto.jpg)]">
+        <span class="text-white font-bold text-lg drop-shadow-[2px_2px_6px_rgba(0,0,0,0.9)]">
+          Modelo {{ i + 1 }}
+        </span>
+
+
         <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-[5px] transition"
           (click)="openModel(item)">
           Abrir
         </button>
       </div>
       }
+      }
 
 
       <!-- Subir archivo -->
       <div
-        class="h-36 rounded-md bg-[#1B3C53] flex flex-col items-center justify-center font-bold text-white shadow-lg hover:scale-[1.02] transition">
-        <label for="file"
+        class="h-36 rounded-md bg-[#1B3C53] flex flex-col items-center justify-center font-bold text-white shadow-lg hover:scale-[1.02] transition gap-2">
+        <label for="fileImage"
           class="border border-white/40 p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:bg-white/20 transition">
-          📁 Seleccionar archivo
+          📁 Seleccionar imagen
         </label>
-        <input type="file" (change)="onFileSelected($event)" id="file" class="hidden" />
+        <input type="file" (change)="onImageSelected($event)" id="fileImage" class="hidden" />
+        <label for="fileModel"
+          class="border border-white/40 p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:bg-white/20 transition">
+          📁 Seleccionar Modelo
+        </label>
+        <input type="file" (change)="onModelSelected($event)" id="fileModel" class="hidden" />
+      </div>
+      <div
+        class="h-36 rounded-md bg-[#1B3C53] flex flex-col items-center justify-center font-bold text-white shadow-lg hover:scale-[1.02] transition gap-2">
+        <button type="button" (click)="onCreateModel()"
+          class="border border-white/40 p-2 rounded-md cursor-pointer hover:scale-[1.04] hover:bg-white/20 transition">Crear
+          modelo</button>
       </div>
     </div>
 
@@ -39,6 +67,7 @@
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 max-h-[45vh] overflow-y-auto p-4 bg-[#ffffff43] rounded-md shadow-inner custom-scrollbar">
 
       @for (item of listModels(); track item.id; let i = $index) {
+      @if(item.plan_image){
       <div
         class="relative flex flex-col items-center justify-center gap-2 rounded-md shadow-lg overflow-hidden hover:scale-[1.02] transition">
         <img src="http://localhost:8000{{ item.plan_image }}" alt="Vista previa del modelo"
@@ -51,6 +80,7 @@
             Blockchain</button>
         </div>
       </div>
+      }
       }
 
       @if(imagePreview()){
@@ -71,3 +101,6 @@
     </div>
   </main>
 </section>
+@if(isLoadingModel()){
+<app-spinner />
+}
