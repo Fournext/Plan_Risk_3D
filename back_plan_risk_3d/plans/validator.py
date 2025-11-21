@@ -13,14 +13,24 @@ def sha256_file(file_path):
     Returns:
         Hash SHA256 con prefijo '0x'
     """
+    if not file_path:
+        return ""
+    
     h = hashlib.sha256()
+    total_bytes = 0
     with open(file_path, 'rb') as f:
         while True:
             chunk = f.read(8192)
             if not chunk:
                 break
             h.update(chunk)
-    return "0x" + h.hexdigest()
+            total_bytes += len(chunk)
+    
+    result_hash = h.hexdigest()
+    print(f"🔍 Hash calculado para {file_path}: {result_hash}")
+    print(f"📏 Tamaño del archivo: {total_bytes} bytes")
+    
+    return "0x" + result_hash
 
 def validate_plan(job_id, path_json=None, path_glb=None, path_img=None):
     """
@@ -39,6 +49,12 @@ def validate_plan(job_id, path_json=None, path_glb=None, path_img=None):
         local_hash = sha256_file(path_img)
         on_chain_hash = data['shaImage'].lower().replace("0x", "")
         local_hash_clean = local_hash.lower().replace("0x", "")
+        
+        print(f"📸 Comparación de imagen:")
+        print(f"   Blockchain: 0x{on_chain_hash}")
+        print(f"   Local:      {local_hash}")
+        print(f"   Match: {local_hash_clean == on_chain_hash}")
+        
         results['image'] = {
             "on_chain": data['shaImage'],
             "local": local_hash,

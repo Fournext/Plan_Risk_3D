@@ -67,10 +67,14 @@ def process_and_save_glb(job, det):
     # Calcular hash real de la imagen
     sha_img = ""
     if job.plan_image:
-        job.plan_image.seek(0)
+        # Abrir y leer el archivo guardado en disco para asegurar consistencia
+        job.plan_image.open('rb')
         img_bytes = job.plan_image.read()
+        job.plan_image.close()
         sha_img = hashlib.sha256(img_bytes).hexdigest()
-        job.plan_image.seek(0)
+        
+        print(f"🔍 Hash de imagen calculado: {sha_img}")
+        print(f"📏 Tamaño de imagen: {len(img_bytes)} bytes")
 
     # (Opcional) Subir a IPFS
     # TODO: Integrar ipfs_client.py para CIDs reales
