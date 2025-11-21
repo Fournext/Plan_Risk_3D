@@ -1,18 +1,25 @@
-import json,math
+import json
+import math
 from decimal import Decimal
+
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
+
 from .models import Material, CategoriaMaterial
 
 
 @api_view(['POST'])
 def calcular_presupuesto(request):
     """
-    Calcula el presupuesto total basado en el JSON recibido desde el frontend.
-    - Usa las tablas de Material y CategoriaMaterial.
+    Calcular presupuesto total basado en objetos 3D.
+
+    Usa las tablas de Material y CategoriaMaterial:
     - Paredes (wall) -> volumen (m3)
     - Puertas/Ventanas (door/window) -> área (m2)
+
+    Returns:
+        Response con total estimado, detalle y materiales no encontrados
     """
     try:
         data = request.data
@@ -29,9 +36,13 @@ def calcular_presupuesto(request):
 
             # Buscar categoría (wall, door, window)
             try:
-                categoria = CategoriaMaterial.objects.get(nombre__iexact=tipo)
+                categoria = CategoriaMaterial.objects.get(
+                    nombre__iexact=tipo
+                )
             except CategoriaMaterial.DoesNotExist:
-                materiales_no_encontrados.append(f"{nombre_material} ({tipo})")
+                materiales_no_encontrados.append(
+                    f"{nombre_material} ({tipo})"
+                )
                 continue
 
             # Buscar material dentro de la categoría
@@ -54,7 +65,8 @@ def calcular_presupuesto(request):
             else:
                 cantidad = width * height
 
-            subtotal = round(cantidad * float(material.precio_unitario),4)
+            precio = float(material.precio_unitario)
+            subtotal = round(cantidad * precio, 4)
             total += subtotal
 
             detalle.append({
@@ -67,13 +79,16 @@ def calcular_presupuesto(request):
             })
 
         return Response({
-            "total_estimado": round(total,4),
+            "total_estimado": round(total, 4),
             "detalle": detalle,
             "materiales_no_encontrados": materiales_no_encontrados
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 def cargar_materiales(request):
@@ -85,8 +100,10 @@ def cargar_materiales(request):
     categorias_data = data.get("categorias", [])
     materiales_data = data.get("materiales", [])
 
-    categorias_creadas, materiales_creados = [], []
-    categorias_actualizadas, materiales_actualizados = [], []
+    categorias_creadas = []
+    materiales_creados = []
+    categorias_actualizadas = []
+    materiales_actualizados = []
 
     # Cargar o actualizar categorías
     for cat in categorias_data:
@@ -94,7 +111,10 @@ def cargar_materiales(request):
         descripcion = cat.get("descripcion", "")
         categoria, creada = CategoriaMaterial.objects.update_or_create(
             nombre__iexact=nombre,
-            defaults={"nombre": nombre, "descripcion": descripcion}
+            defaults={
+                "nombre": nombre,
+                "descripcion": descripcion
+            }
         )
         if creada:
             categorias_creadas.append(nombre)
@@ -105,7 +125,9 @@ def cargar_materiales(request):
     for mat in materiales_data:
         cat_nombre = mat.get("categoria")
         try:
-            categoria = CategoriaMaterial.objects.get(nombre__iexact=cat_nombre)
+            categoria = CategoriaMaterial.objects.get(
+                nombre__iexact=cat_nombre
+            )
         except CategoriaMaterial.DoesNotExist:
             continue
 
