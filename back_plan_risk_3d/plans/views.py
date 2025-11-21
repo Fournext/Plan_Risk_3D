@@ -313,9 +313,9 @@ def validar_plano(request):
 
     # Guardar temporalmente los archivos recibidos
     tmp_dir = tempfile.gettempdir()
-    temp_json = os.path.join(tmp_dir, "tmp_json.json")
-    temp_glb = os.path.join(tmp_dir, "tmp_model.glb")
-    temp_img = os.path.join(tmp_dir, "tmp_image.png")
+    temp_json = os.path.join(tmp_dir, "tmp_json.json") if json_file else None
+    temp_glb = os.path.join(tmp_dir, "tmp_model.glb") if glb_file else None
+    temp_img = os.path.join(tmp_dir, "tmp_image.png") if img_file else None
 
     if json_file:
         with open(temp_json, 'wb') as f:
