@@ -34,13 +34,21 @@ export class ModalBlockchain {
     const file = event.target.files[0];
     if (!file) return;
 
+    // 🔹 Forzar tipo PNG (mantiene extensión correcta)
     const reader = new FileReader();
     reader.onload = () => {
-      this.previewImage.set(reader.result as string);
+      const blob = new Blob([reader.result as ArrayBuffer], { type: 'image/png' });
+      const fixedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".png"), { type: 'image/png' });
+
+      this.previewImage.set(URL.createObjectURL(fixedFile));
+      this.selectedFile.set(fixedFile);
+      console.log("✅ Imagen convertida a PNG:", fixedFile);
     };
-    reader.readAsDataURL(file);
-    this.selectedFile.set(file);
+
+    // Leer como ArrayBuffer para reconstruir bien el Blob
+    reader.readAsArrayBuffer(file);
   }
+
   //crear jsonVacio
   public crearJsonVacio() {
     let blob: Blob;
@@ -99,7 +107,7 @@ export class ModalBlockchain {
     ).subscribe({
       next: (response) => {
         console.log({ response });
-        if (response.details.valid) {
+        if (response.details.image.valid) {
           this.toastr.success('La imagen es válida y coincide con la original en la blockchain.', 'Verificación Exitosa');
         } else {
           this.toastr.error('La imagen no coincide con la original en la blockchain.', 'Verificación Fallida');

@@ -7,8 +7,10 @@ export interface ResponseBlockchain {
     job_id: string;
     status: string;
     details: {
-        on_chain: string;
-        local: string;
-        valid: boolean;
+        image: {
+            on_chain: string;
+            local: string;
+            valid: boolean;
+        }
     }
 }
