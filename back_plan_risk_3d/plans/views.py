@@ -38,7 +38,14 @@ def process_and_save_glb(job, det):
     json_bytes = json.dumps(det, ensure_ascii=False).encode('utf-8')
     sha_json = hashlib.sha256(json_bytes).hexdigest()
     sha_glb = hashlib.sha256(glb_buf.getvalue()).hexdigest() if mesh is not None else ""
-    sha_img = hashlib.sha256(b"placeholder_image").hexdigest()  # opcional (si tienes una imagen)
+    
+    # Calcular hash real de la imagen
+    sha_img = ""
+    if job.plan_image:
+        job.plan_image.seek(0)  # Asegurar lectura desde el inicio
+        img_bytes = job.plan_image.read()
+        sha_img = hashlib.sha256(img_bytes).hexdigest()
+        job.plan_image.seek(0)  # Resetear puntero
 
     # ===== 4) (Opcional) Subir a IPFS =====
     # Si aún no usas IPFS, deja los CIDs fijos. Luego puedes integrar ipfs_client.py
