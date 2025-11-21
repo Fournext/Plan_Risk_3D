@@ -12,7 +12,7 @@
       @if(item.plan_file){
       <div
         class="h-36 rounded-md bg-cover bg-center flex flex-col justify-center items-center gap-2 text-black font-semibold shadow-lg transition hover:scale-[1.02]"
-        [style.background-image]="'url(http://localhost:8000' + item.plan_file + ')'">
+        [style.background-image]="'url(' + API + item.plan_file.slice(1)+ ')'">
         <span class="text-gray-800 font-bold text-lg drop-shadow-[2px_2px_6px_rgba(0,0,0,0.5)]">
           Modelo {{ i + 1 }}
         </span>
@@ -70,13 +70,14 @@
       @if(item.plan_image){
       <div
         class="relative flex flex-col items-center justify-center gap-2 rounded-md shadow-lg overflow-hidden hover:scale-[1.02] transition">
-        <img src="http://localhost:8000{{ item.plan_image }}" alt="Vista previa del modelo"
+        <img src="{{ API + item.plan_image.slice(1) }}" alt="Vista previa del modelo"
           class="w-full h-44 object-cover rounded-md shadow-md hover:scale-[1.02] transition absolute z-o" />
         <span class=" text-black px-2 py-1  font-semibold z-10">Modelo {{ i + 1 }}</span>
         <div class="flex gap-2 bottom-10 z-10">
           <button (click)="openModalViewer(item.plan_image||'')"
             class="bg-green-600 hover:bg-green-700 text-white px-3  rounded-[5px] py-1 transition ">Ver</button>
-          <button class="bg-yellow-600 hover:bg-yellow-700 text-white px-3  rounded-[5px] py-1 transition ">Verificar
+          <button (click)="OpenModalBlockchain(item.id, item.plan_image)"
+            class="bg-yellow-600 hover:bg-yellow-700 text-white px-3  rounded-[5px] py-1 transition ">Verificar
             Blockchain</button>
         </div>
       </div>
@@ -89,7 +90,7 @@
         <div
           class="relative bg-white rounded-lg shadow-2xl max-w-4xl w-[90%] max-h-[90vh] flex justify-center items-center overflow-hidden"
           (click)="$event.stopPropagation()">
-          <img [src]="'http://localhost:8000' + imagePreview()" alt="Vista ampliada"
+          <img [src]="API + imagePreview()?.slice(1)" alt="Vista ampliada"
             class="max-w-full max-h-[90vh] object-contain" />
           <button (click)="closeModalViewer()"
             class="absolute top-3 right-3 text-gray-600 hover:text-black text-2xl font-bold">
@@ -103,4 +104,8 @@
 </section>
 @if(isLoadingModel()){
 <app-spinner />
+}
+
+@if(getOpenModalBlockchain()){
+<app-modal-blockchain [action]="closeModalBlockchain" />
 }

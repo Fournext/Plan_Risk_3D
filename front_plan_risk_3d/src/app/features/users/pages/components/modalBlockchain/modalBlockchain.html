@@ -1,0 +1,43 @@
+<!-- MODAL VERIFICACIÓN BLOCKCHAIN -->
+<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+
+    <div class="bg-white w-full max-w-[700px] p-6 rounded-xl shadow-2xl animate-fade-in relative">
+
+        <!-- Botón cerrar -->
+        <button (click)="action()?.()" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl leading-none">
+            ✕
+        </button>
+
+        <!-- Título -->
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">Verificar en Blockchain</h2>
+
+        <!-- Vista previa doble -->
+        <div class="flex w-full gap-4 mb-6">
+            <div class="w-1/2 h-48 bg-cover bg-center rounded-md border border-gray-200 "
+                [style.background-image]="'url(' + API + imageOriginal().url + ')'">
+                <span class="ml-1">Orignal</span>
+            </div>
+            <div class="w-1/2 h-48 bg-cover bg-center rounded-md border border-gray-200"
+                [style.background-image]="'url(' + previewImage() + ')'">
+                <span class="ml-1">Subido</span>
+            </div>
+
+        </div>
+
+        <!-- Área de controles -->
+        <div class="flex flex-col gap-4">
+
+            <label for="fileToVerify" class="font-semibold text-gray-700">
+                Selecciona el archivo del plan para verificar:
+            </label>
+
+            <input type="file" id="fileToVerify" (change)="onImageSelected($event)"
+                class="border border-gray-300 p-2 rounded-md shadow-sm focus:ring-2 focus:ring-blue-600" />
+
+            <button (click)="onVerifyImage()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition w-max">
+                Verificar Plano
+            </button>
+        </div>
+
+    </div>
+</div>

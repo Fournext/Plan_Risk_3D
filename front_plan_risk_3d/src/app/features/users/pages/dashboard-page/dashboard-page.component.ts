@@ -9,23 +9,48 @@ import { CommonModule } from '@angular/common';
 import { Spinner } from "../../../../layout/components/spinner/spinner";
 import { Modelo3D } from '../../../../models/classes/model3D';
 import * as THREE from 'three';
+import { BlockchainService } from '../../services/blockchain.service';
+import { ModalBlockchain } from "../components/modalBlockchain/modalBlockchain";
+import { environment } from '../../../../../environments/environment';
 
 
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [CommonModule, Spinner],
+  imports: [CommonModule, Spinner, ModalBlockchain],
   templateUrl: './dashboard-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardPageComponent implements OnInit {
   private model3DService = inject(ModelsService);
+  private blockchainService = inject(BlockchainService);
   private tokenStorageService = inject(TokenStorageService);
   private router = inject(Router);
   private toastr = inject(ToastrService);
+  public API = environment.endpoint;
+
+  private openModalBlockchain = signal(false);
 
   listModels = computed(() => this.model3DService.listModelsUser());
   imagePreview = signal<string | null>(null);
+
+  public OpenModalBlockchain(id: number, url: string) {
+    console.log({id});
+    this.blockchainService.imageToVerify.set({
+      id:id ,
+      url: url.slice(1)
+    });
+    this.openModalBlockchain.set(true);
+  }
+
+  public closeModalBlockchain = () => {
+    this.openModalBlockchain.set(false);
+  }
+
+  public getOpenModalBlockchain() {
+    return this.openModalBlockchain();
+  }
+
 
   openModel(modelo: Model3D) {
     localStorage.setItem('modelo', JSON.stringify(modelo));
@@ -143,6 +168,9 @@ export class DashboardPageComponent implements OnInit {
           });
         }
       });
+  }
+
+  onVerifyPlan() {
 
   }
 

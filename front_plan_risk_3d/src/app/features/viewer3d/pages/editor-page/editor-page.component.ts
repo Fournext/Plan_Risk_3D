@@ -22,6 +22,7 @@ import { ModelsService } from '../../services/models.service';
 import { StructuralAnalysisService } from '../../services/structural-analysis.service';
 import { StructuralAnalysis } from '../../../../models/interfaces/model3D/structural_analysis.interface';
 import { Spinner } from "../../../../layout/components/spinner/spinner";
+import { environment } from '../../../../../environments/environment';
 
 
 @Component({
@@ -37,6 +38,7 @@ export class EditorPageComponent {
   private budgetService = inject(BudgetService);
   private modelService = inject(ModelsService);
   private analysisService = inject(StructuralAnalysisService);
+  private API = environment.endpoint;
   // ChangeDetectorRef para forzar actualización con ChangeDetectionStrategy.OnPush
   private cdr = inject(ChangeDetectorRef);
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -236,7 +238,7 @@ export class EditorPageComponent {
         console.warn('⚠️ No se encontró modelo en localStorage.');
         url = 'https://res.cloudinary.com/diqqfka6g/image/upload/v1763521878/vacio_wama55.glb';
       } else {
-        url = `http://localhost:8000${model.glb_model}`;
+        url = `${this.API}${model.glb_model.slice(1)}`; // Quitar la barra inicial
       }
       console.log('🧱 Cargando modelo desde:', url);
 
