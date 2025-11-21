@@ -1,60 +1,85 @@
 # plans/views.py
-import io, json, os, tempfile
+import hashlib
+import io
+import json
+import os
+import re
+import tempfile
+import time
+
 from django.conf import settings
+from django.core.files.base import ContentFile
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import (
+    api_view,
+    parser_classes,
+    permission_classes
+)
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.core.files.base import ContentFile
+
 from mrcnn import views
 from plans.models import Plan3DJob
-from users.models import Usuario 
+from users.models import Usuario
 from .serializers import Plan3DJobSerializer
-from rest_framework.decorators import permission_classes
 
 
 def process_and_save_glb(job, det):
     """
-    Paso 6 y 7: Generar GLB en memoria, guardar, actualizar metadatos y registrar en blockchain.
+    Generar GLB en memoria, guardar metadatos y registrar en blockchain.
+
+    Args:
+        job: Instancia de Plan3DJob
+        det: Diccionario con datos de detección
+
+    Returns:
+        job: Instancia actualizada de Plan3DJob
     """
-    import io, json, hashlib
-    from django.core.files.base import ContentFile
     from .three import build_scene_mesh, export_glb
     from .onchain import register_on_chain
 
-    # ===== 1) Generar el modelo 3D (GLB) =====
+    # Generar el modelo 3D (GLB)
     mesh = build_scene_mesh(det, min_score=0.0, cut_openings=True)
     if mesh is not None:
         glb_buf = io.BytesIO()
         export_glb(mesh, glb_buf)
-        job.glb_model.save(f'job_{job.id}.glb', ContentFile(glb_buf.getvalue()), save=False)
+        filename = f'job_{job.id}.glb'
+        job.glb_model.save(
+            filename,
+            ContentFile(glb_buf.getvalue()),
+            save=False
+        )
 
-    # ===== 2) Guardar dimensiones =====
+    # Guardar dimensiones
     job.width = det.get("Width", 0)
     job.height = det.get("Height", 0)
 
-    # ===== 3) Calcular hashes SHA256 =====
+    # Calcular hashes SHA256
     json_bytes = json.dumps(det, ensure_ascii=False).encode('utf-8')
     sha_json = hashlib.sha256(json_bytes).hexdigest()
-    sha_glb = hashlib.sha256(glb_buf.getvalue()).hexdigest() if mesh is not None else ""
-    
+    sha_glb = (
+        hashlib.sha256(glb_buf.getvalue()).hexdigest()
+        if mesh is not None
+        else ""
+    )
+
     # Calcular hash real de la imagen
     sha_img = ""
     if job.plan_image:
-        job.plan_image.seek(0)  # Asegurar lectura desde el inicio
+        job.plan_image.seek(0)
         img_bytes = job.plan_image.read()
         sha_img = hashlib.sha256(img_bytes).hexdigest()
-        job.plan_image.seek(0)  # Resetear puntero
+        job.plan_image.seek(0)
 
-    # ===== 4) (Opcional) Subir a IPFS =====
-    # Si aún no usas IPFS, deja los CIDs fijos. Luego puedes integrar ipfs_client.py
+    # (Opcional) Subir a IPFS
+    # TODO: Integrar ipfs_client.py para CIDs reales
     cid_img = "bafy-placeholder-img"
     cid_json = "bafy-placeholder-json"
     cid_glb = "bafy-placeholder-glb"
     cid_meta = "bafy-placeholder-meta"
 
-    # ===== 5) Registrar en la blockchain Polygon Amoy =====
+    # Registrar en la blockchain Polygon Amoy
     try:
         tx_hash = register_on_chain(
             job.id,
@@ -68,90 +93,129 @@ def process_and_save_glb(job, det):
         )
         if tx_hash:
             print(f"✅ Modelo registrado en blockchain. Tx: {tx_hash}")
-            print(f"🔍 Ver en: https://amoy.polygonscan.com/tx/{tx_hash}")
-            job.blockchain_tx = tx_hash  # campo opcional en tu modelo (añádelo si no existe)
+            print(
+                f"🔍 Ver en: https://amoy.polygonscan.com/tx/{tx_hash}"
+            )
+            job.blockchain_tx = tx_hash
     except Exception as e:
         print(f"⚠️ No se pudo registrar en blockchain: {e}")
 
-    # ===== 6) Guardar job =====
+    # Guardar job
     job.save()
     return job
+
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def create_plan3d_job(request):
-    # 1) Guardar SOLO el archivo de entrada (Django lo pone en media/inputs/)
-    ser = Plan3DJobSerializer(data=request.data)
-    if not ser.is_valid():
-        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-    job = ser.save()
+    """
+    Crear un job de Plan3D a partir de un archivo subido.
 
-    # 2) Convertir a imagen si hace falta (PDF/DXF/DWG) SIN escribir a disco
+    Procesa el archivo, ejecuta inferencia, genera GLB y registra en blockchain.
+    """
+    # Guardar el archivo de entrada
+    serializer = Plan3DJobSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    job = serializer.save()
+
+    # Convertir a imagen si es necesario (PDF/DXF/DWG)
     from .converters import image_from_any
     img, err = image_from_any(job.plan_file.path)
     if img is None:
+        detail_msg = f"No se pudo preparar la imagen para inferencia: {err}"
         return Response(
-            {"detail": f"No se pudo preparar la imagen para inferencia: {err}"},
+            {"detail": detail_msg},
             status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         )
 
-    # 3) Guardar la imagen rasterizada en memoria (plan_image) — sin open()
+    # Guardar la imagen rasterizada en memoria
     png_buf = io.BytesIO()
     img.save(png_buf, format='PNG')
-    job.plan_image.save(f'job_{job.id}_raster.png',
-                        ContentFile(png_buf.getvalue()), save=False)
+    image_filename = f'job_{job.id}_raster.png'
+    job.plan_image.save(
+        image_filename,
+        ContentFile(png_buf.getvalue()),
+        save=False
+    )
 
-    # 4) Inferencia
+    # Ejecutar inferencia
     from .inference import run_inference
     det = run_inference(img)
 
-    # 5) Guardar JSON en memoria (una sola vez)
+    # Guardar JSON de detecciones en memoria
     json_bytes = json.dumps(det, ensure_ascii=False).encode('utf-8')
-    job.detections_json.save(f'job_{job.id}_detections.json',
-                             ContentFile(json_bytes), save=False)
-
-
-    # 5.1) Asociar el job con el usuario
-    usuario_id = request.data.get("usuario")
-    try:
-        usuario_instance = Usuario.objects.get(pk=usuario_id)
-    except Usuario.DoesNotExist:
-        return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    job.usuario = usuario_instance
-    job.save()
-
-    # 6 y 7) Generar GLB, guardar y metadatos
-    process_and_save_glb(job, det)
-
-    return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
-
-# POST: Ejemplo de otra función POST separada
-
-@api_view(['POST'])
-@parser_classes([MultiPartParser, FormParser])
-def create_plan_json(request):
-    # Espera un archivo .json en el campo 'plan_file' del request
-    json_file = request.FILES.get('plan_file')
-    if not json_file or not json_file.name.endswith('.json'):
-        return Response({'detail': 'Se requiere un archivo .json en el campo "plan_file".'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Guardar el archivo en media/inputs/ (usando Plan3DJob para mantener consistencia)
-    ser = Plan3DJobSerializer(data=request.data)
-    if not ser.is_valid():
-        print(ser.errors)
-        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-    job = ser.save()
-    
-    # Guardar el archivo json en el campo detections_json
-    job.detections_json.save(f'job_{job.id}_detections.json', json_file, save=False)
+    json_filename = f'job_{job.id}_detections.json'
+    job.detections_json.save(
+        json_filename,
+        ContentFile(json_bytes),
+        save=False
+    )
 
     # Asociar el job con el usuario
     usuario_id = request.data.get("usuario")
     try:
         usuario_instance = Usuario.objects.get(pk=usuario_id)
     except Usuario.DoesNotExist:
-        return Response({'detail': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Usuario no encontrado.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    job.usuario = usuario_instance
+    job.save()
+
+    # Generar GLB y registrar en blockchain
+    process_and_save_glb(job, det)
+
+    return Response(
+        Plan3DJobSerializer(job).data,
+        status=status.HTTP_201_CREATED
+    )
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def create_plan_json(request):
+    """
+    Crear un Plan3D a partir de un archivo JSON de detecciones.
+
+    Espera un archivo .json en el campo 'plan_file' del request.
+    """
+    json_file = request.FILES.get('plan_file')
+    if not json_file or not json_file.name.endswith('.json'):
+        detail_msg = 'Se requiere un archivo .json en el campo "plan_file".'
+        return Response(
+            {'detail': detail_msg},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Crear job
+    serializer = Plan3DJobSerializer(data=request.data)
+    if not serializer.is_valid():
+        print(serializer.errors)
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    job = serializer.save()
+
+    # Guardar el archivo JSON en el campo detections_json
+    json_filename = f'job_{job.id}_detections.json'
+    job.detections_json.save(json_filename, json_file, save=False)
+
+    # Asociar el job con el usuario
+    usuario_id = request.data.get("usuario")
+    try:
+        usuario_instance = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        return Response(
+            {'detail': 'Usuario no encontrado.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     job.usuario = usuario_instance
     job.save()
@@ -161,18 +225,27 @@ def create_plan_json(request):
     try:
         det = json.load(json_file)
     except Exception as e:
-        return Response({'detail': f'Error al leer el JSON: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': f'Error al leer el JSON: {str(e)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # 6 y 7) Generar GLB, guardar y metadatos
+    # Generar GLB y registrar en blockchain
     process_and_save_glb(job, det)
 
-    return Response(Plan3DJobSerializer(job).data, status=status.HTTP_201_CREATED)
+    return Response(
+        Plan3DJobSerializer(job).data,
+        status=status.HTTP_201_CREATED
+    )
+
 
 @api_view(['POST'])
 def generate_dynamic_glb(request):
     """
-    Endpoint que recibe el JSON de detecciones y colores dinámicos desde el frontend
-    y devuelve el modelo GLB generado sin almacenar texturas en el backend.
+    Generar modelo GLB con colores personalizados.
+
+    Recibe JSON de detecciones y colores dinámicos desde el frontend
+    y devuelve el modelo GLB generado.
     """
     try:
         det_json = request.data.get("det_json")
@@ -191,33 +264,45 @@ def generate_dynamic_glb(request):
         # Generar el GLB con colores personalizados
         process_and_save_glb(job, det_json, colors=colors)
 
+        message = "Modelo GLB generado exitosamente con colores personalizados."
         return Response(
             {
-                "message": "Modelo GLB generado exitosamente con colores personalizados.",
+                "message": message,
                 "job_id": job.id,
                 "glb_path": job.glb_model.url if job.glb_model else None
             },
             status=status.HTTP_200_OK
         )
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 
-#obtener la lista de modelos generados por el usuiario require token xd
 @api_view(['GET'])
 @parser_classes([MultiPartParser, FormParser])
 @permission_classes([IsAuthenticated])
 def get_lista_modelos(request, format=None):
-    jobs = Plan3DJob.objects.filter(usuario=request.user)
-    ser = Plan3DJobSerializer(jobs, many=True)
-    return Response(ser.data, status=status.HTTP_200_OK)
+    """
+    Obtener la lista de modelos 3D generados por el usuario autenticado.
 
-# POST: Validar plano 3D contra blockchain
+    Requiere autenticación con token.
+    """
+    jobs = Plan3DJob.objects.filter(usuario=request.user)
+    serializer = Plan3DJobSerializer(jobs, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 @api_view(['POST'])
 def validar_plano(request):
     """
-    Recibe un job_id y los archivos (JSON, GLB, imagen) para verificar autenticidad.
+    Validar autenticidad de un plano contra blockchain.
+
+    Recibe un job_id y los archivos (JSON, GLB, imagen)
+    para verificar sus hashes contra los registrados en blockchain.
     """
     from .validator import validate_plan
 
@@ -233,49 +318,68 @@ def validar_plano(request):
     temp_img = os.path.join(tmp_dir, "tmp_image.png")
 
     if json_file:
-        with open(temp_json, 'wb') as f: f.write(json_file.read())
+        with open(temp_json, 'wb') as f:
+            f.write(json_file.read())
     if glb_file:
-        with open(temp_glb, 'wb') as f: f.write(glb_file.read())
+        with open(temp_glb, 'wb') as f:
+            f.write(glb_file.read())
     if img_file:
-        with open(temp_img, 'wb') as f: f.write(img_file.read())
+        with open(temp_img, 'wb') as f:
+            f.write(img_file.read())
 
     result = validate_plan(job_id, temp_json, temp_glb, temp_img)
     return Response(result)
+
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
 def reemplazar_glb(request):
     """
-    Reemplaza un archivo GLB existente basado en el nombre del archivo recibido.
+    Reemplazar un archivo GLB existente.
+
     Espera:
-      - file_glb: archivo .glb (por ejemplo "job_2.glb")
-      - usuario: id del usuario que realiza la acción
+        - file_glb: archivo .glb (por ejemplo "job_2.glb")
+        - usuario: id del usuario que realiza la acción
+
+    Returns:
+        Plan3DJob serializado con el nuevo archivo GLB
     """
     new_glb = request.FILES.get('file_glb')
     usuario_id = request.data.get('usuario')
 
-    # 🔹 Validar usuario
+    # Validar usuario
     try:
         usuario = Usuario.objects.get(id=usuario_id)
     except Usuario.DoesNotExist:
-        return Response({"detail": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": "Usuario no encontrado"},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
     if not new_glb:
-        return Response({"detail": "No se envió archivo .glb"}, status=status.HTTP_400_BAD_REQUEST)
-
-    import re, time
+        return Response(
+            {"detail": "No se envió archivo .glb"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     match = re.search(r'job_(\d+)\.glb$', new_glb.name)
     if not match:
-        return Response({"detail": "Nombre de archivo no válido (debe ser job_<id>.glb)"}, status=status.HTTP_400_BAD_REQUEST)
+        detail_msg = "Nombre de archivo no válido (debe ser job_<id>.glb)"
+        return Response(
+            {"detail": detail_msg},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     job_id = int(match.group(1))
 
     try:
         job = Plan3DJob.objects.get(id=job_id)
     except Plan3DJob.DoesNotExist:
-        return Response({"detail": f"No existe Plan3DJob con id {job_id}"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"detail": f"No existe Plan3DJob con id {job_id}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
 
-    # 🔸 Reemplazar archivo GLB existente con nombre único (para evitar cache)
+    # Reemplazar archivo GLB existente con nombre único (evitar cache)
     if job.glb_model:
         job.glb_model.delete(save=False)
 
@@ -286,6 +390,6 @@ def reemplazar_glb(request):
     job.usuario = usuario
     job.save(update_fields=['glb_model', 'usuario'])
 
-    # ✅ Devolver modelo completo actualizado
+    # Devolver modelo completo actualizado
     serializer = Plan3DJobSerializer(job)
     return Response(serializer.data, status=status.HTTP_200_OK)

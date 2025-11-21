@@ -1,12 +1,14 @@
 # plans/onchain.py
 import os
-from web3 import Web3
+
 from dotenv import load_dotenv
+from web3 import Web3
 
 # Cargar variables del archivo .env
 load_dotenv()
 
-# === CONFIGURACIÓN GENERAL ===
+
+# Configuración general
 RPC_URL = "https://rpc-amoy.polygon.technology"
 CONTRACT_ADDR = os.getenv("CONTRACT_ADDR")  # Dirección del contrato desplegado
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")      # Clave privada de tu wallet
@@ -54,7 +56,8 @@ ABI = [
                     {"internalType": "bytes32", "name": "shaGlb", "type": "bytes32"},
                     {"internalType": "string", "name": "metaCid", "type": "string"},
                     {"internalType": "uint64", "name": "timestamp", "type": "uint64"},
-                    {"internalType": "address", "name": "owner", "type": "address"},
+                    {"internalType": "address", "name": "owner",
+                     "type": "address"},
                 ],
                 "internalType": "struct Plan3DRegistry.Asset",
                 "name": "",
@@ -66,30 +69,55 @@ ABI = [
     }
 ]
 
-# === CREAR OBJETO DEL CONTRATO ===
+
+# Crear objeto del contrato
 contract = w3.eth.contract(
     address=w3.to_checksum_address(CONTRACT_ADDR),
     abi=ABI
 )
 
-# === FUNCIÓN PRINCIPAL PARA REGISTRAR ===
-def register_on_chain(job_id, cid_img, cid_json, cid_glb, sha_img, sha_json, sha_glb, cid_meta):
+
+def register_on_chain(job_id, cid_img, cid_json, cid_glb,
+                      sha_img, sha_json, sha_glb, cid_meta):
     """
-    Registra un modelo en la blockchain Polygon Amoy.
-    Guarda los CIDs de IPFS y los hashes SHA256 de cada archivo.
+    Registrar modelo en la blockchain Polygon Amoy.
+
+    Args:
+        job_id: ID del trabajo
+        cid_img, cid_json, cid_glb: CIDs de IPFS
+        sha_img, sha_json, sha_glb: Hashes SHA256
+        cid_meta: CID de metadatos
+
+    Returns:
+        Hash de transacción o None en caso de error
     """
     try:
         print("🔗 Iniciando registro en blockchain...")
 
         nonce = w3.eth.get_transaction_count(acct.address)
+
+        # Convertir hashes a bytes
+        sha_img_bytes = (
+            bytes.fromhex(sha_img[2:]) if sha_img.startswith("0x")
+            else bytes.fromhex(sha_img)
+        )
+        sha_json_bytes = (
+            bytes.fromhex(sha_json[2:]) if sha_json.startswith("0x")
+            else bytes.fromhex(sha_json)
+        )
+        sha_glb_bytes = (
+            bytes.fromhex(sha_glb[2:]) if sha_glb.startswith("0x")
+            else bytes.fromhex(sha_glb)
+        )
+
         tx = contract.functions.register(
             int(job_id),
             cid_img,
             cid_json,
             cid_glb,
-            bytes.fromhex(sha_img[2:]) if sha_img.startswith("0x") else bytes.fromhex(sha_img),
-            bytes.fromhex(sha_json[2:]) if sha_json.startswith("0x") else bytes.fromhex(sha_json),
-            bytes.fromhex(sha_glb[2:]) if sha_glb.startswith("0x") else bytes.fromhex(sha_glb),
+            sha_img_bytes,
+            sha_json_bytes,
+            sha_glb_bytes,
             cid_meta
         ).build_transaction({
             "from": acct.address,
@@ -103,7 +131,8 @@ def register_on_chain(job_id, cid_img, cid_json, cid_glb, sha_img, sha_json, sha
         signed = acct.sign_transaction(tx)
         tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
         print(f"✅ Transacción enviada: {tx_hash.hex()}")
-        print(f"🔍 Ver en https://amoy.polygonscan.com/tx/{tx_hash.hex()}")
+        url = f"https://amoy.polygonscan.com/tx/{tx_hash.hex()}"
+        print(f"🔍 Ver en {url}")
         return tx_hash.hex()
 
     except Exception as e:
@@ -113,7 +142,13 @@ def register_on_chain(job_id, cid_img, cid_json, cid_glb, sha_img, sha_json, sha
 
 def get_asset(job_id: int):
     """
-    Lee un registro desde la blockchain por su job_id.
+    Leer registro desde la blockchain por job_id.
+
+    Args:
+        job_id: ID del trabajo a consultar
+
+    Returns:
+        Diccionario con datos del asset o None en caso de error
     """
     try:
         data = contract.functions.getAsset(int(job_id)).call()
